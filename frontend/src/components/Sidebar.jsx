@@ -167,7 +167,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       {chatRooms.length === 0 ? (
         <div className="no-chats">
           <p>No chat rooms yet</p>
-          <p className="hint">Join or create a chat room to start messaging</p>
+          <p className="hint">Join a chat room to start messaging</p>
         </div>
       ) : (
         <ul className="chat-list">
