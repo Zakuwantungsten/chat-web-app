@@ -176,13 +176,10 @@ class MessageController {
         });
       }
 
-      // Get messages from when user joined
+      // Get messages from the chat room
       const messages = await Message.findAndCountAll({
         where: {
           chatRoomId: roomId,
-          createdAt: {
-            [Op.gte]: membership.joinedAt
-          },
           isDeleted: false
         },
         include: [

@@ -157,14 +157,18 @@ const ChatInterface = () => {
 
   const loadMessages = async () => {
     try {
+      console.log('Loading messages for room:', roomId);
       const response = await api.get(`/api/messages/${roomId}`);
+      console.log('Messages response:', response.data);
       const messagesData = response.data.data || response.data || [];
+      console.log('Parsed messages data:', messagesData);
       setMessages(Array.isArray(messagesData) ? messagesData : []);
       setLoading(false);
     } catch (err) {
+      console.error('Error loading messages - Full error:', err);
+      console.error('Error response:', err.response?.data);
       setError('Failed to load messages');
       setLoading(false);
-      console.error('Error loading messages:', err);
     }
   };
 
