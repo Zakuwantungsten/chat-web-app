@@ -247,6 +247,20 @@ const ChatInterface = () => {
     }
   };
 
+  const getChatDisplayName = () => {
+    if (!chatRoom) return '';
+    
+    // For individual chats, show only the other person's name
+    if (chatRoom.type === 'individual' && chatRoom.members && Array.isArray(chatRoom.members)) {
+      const otherMember = chatRoom.members.find(member => member.id !== user?.id);
+      if (otherMember) {
+        return `${otherMember.firstName || ''} ${otherMember.lastName || ''}`.trim() || otherMember.username || 'Unknown User';
+      }
+    }
+    // For group chats, return the room name
+    return chatRoom.name || 'Chat Room';
+  };
+
   const handleInputChange = (e) => {
     setNewMessage(e.target.value);
     
@@ -328,22 +342,12 @@ const ChatInterface = () => {
           >
             ← Back
           </button>
-          <div className="chat-info">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <h2>{chatRoom.name}</h2>
-              {chatRoom.type && (
-                <span className="room-type-badge">{chatRoom.type}</span>
-              )}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              {chatRoom.description && (
-                <span className="chat-description">{chatRoom.description}</span>
-              )}
-              {chatRoom.memberCount > 0 && (
-                <span className="member-count">● {chatRoom.memberCount || 0} members</span>
-              )}
-            </div>
-          </div>
+        </div>
+        <div className="chat-header-center">
+          <h2 className="chat-name">{getChatDisplayName()}</h2>
+          {chatRoom.type === 'group' && chatRoom.memberCount > 0 && (
+            <span className="member-count">{chatRoom.memberCount} members</span>
+          )}
         </div>
         <div className="chat-header-right">
           {isUserInRoom ? (
