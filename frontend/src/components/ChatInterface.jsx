@@ -30,13 +30,19 @@ const ChatInterface = () => {
   const fileInputRef = useRef(null);
 
   const handleUserClick = async (sender) => {
+    // Prevent users from starting a chat with themselves
+    if (sender.id === user?.id) {
+      console.log('Cannot start a chat with yourself');
+      return;
+    }
+
     try {
       // Check if a 1-on-1 chat already exists between current user and clicked user
       const response = await api.get('/api/chatrooms');
       const rooms = response.data.data || response.data || [];
       
       const existingChat = rooms.find(room => 
-        room.type === 'individual' && 
+        (room.type === 'individual' || room.type === 'direct') && 
         room.members?.some(member => member.id === sender.id)
       );
       
@@ -47,7 +53,7 @@ const ChatInterface = () => {
         // Create new 1-on-1 chat
         const createResponse = await api.post('/api/chatrooms', {
           name: `${sender.firstName} ${sender.lastName}`,
-          type: 'individual',
+          type: 'direct',
           members: [sender.id]
         });
         
@@ -269,7 +275,7 @@ const ChatInterface = () => {
     console.log('Current user:', user?.id);
     
     // For individual chats, show only the other person's name
-    if (chatRoom.type === 'individual' && chatRoom.members && Array.isArray(chatRoom.members)) {
+    if ((chatRoom.type === 'individual' || chatRoom.type === 'direct') && chatRoom.members && Array.isArray(chatRoom.members)) {
       const otherMember = chatRoom.members.find(member => member.id !== user?.id);
       console.log('Other member:', otherMember);
       if (otherMember) {
@@ -402,6 +408,7 @@ const ChatInterface = () => {
               messages={messages} 
               currentUser={user}
               loading={loading}
+              onUserClick={handleUserClick}
             />
             {typingUsers.length > 0 && (
               <div className="typing-indicator">

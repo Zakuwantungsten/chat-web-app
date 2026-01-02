@@ -102,7 +102,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   const getChatDisplayName = (room) => {
     // For individual chats, show only the other person's name
-    if (room.type === 'individual' && room.members && Array.isArray(room.members)) {
+    if ((room.type === 'individual' || room.type === 'direct') && room.members && Array.isArray(room.members)) {
       const otherMember = room.members.find(member => member.id !== user?.id);
       if (otherMember) {
         return `${otherMember.firstName || ''} ${otherMember.lastName || ''}`.trim() || otherMember.username || 'Unknown User';
