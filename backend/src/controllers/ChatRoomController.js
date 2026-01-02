@@ -537,6 +537,49 @@ class ChatRoomController {
       });
     }
   }
+
+  // Delete a chat room
+  static async deleteChatRoom(req, res) {
+    try {
+      const { roomId } = req.params;
+      const userId = req.user.id;
+      const userRole = req.user.role;
+
+      // Only class reps can delete group chat rooms
+      const chatRoom = await ChatRoom.findByPk(roomId);
+      if (!chatRoom) {
+        return res.status(404).json({
+          success: false,
+          message: 'Chat room not found'
+        });
+      }
+
+      // Check if user is class rep or room creator
+      if (userRole !== 'class_rep' && chatRoom.createdBy !== userId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Only class representatives can delete group chat rooms'
+        });
+      }
+
+      // Delete all related records
+      await UserChatRoom.destroy({ where: { chatRoomId: roomId } });
+      await Message.destroy({ where: { chatRoomId: roomId } });
+      await chatRoom.destroy();
+
+      res.json({
+        success: true,
+        message: 'Chat room deleted successfully'
+      });
+    } catch (error) {
+      console.error('Delete chat room error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete chat room',
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = ChatRoomController;

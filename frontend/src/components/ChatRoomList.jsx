@@ -13,6 +13,9 @@ const ChatRoomList = () => {
   const [newRoomName, setNewRoomName] = useState('');
   const [newRoomDescription, setNewRoomDescription] = useState('');
   const [creating, setCreating] = useState(false);
+  const [editingRoom, setEditingRoom] = useState(null);
+  const [editRoomName, setEditRoomName] = useState('');
+  const [editRoomDescription, setEditRoomDescription] = useState('');
   const { user, api, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -117,6 +120,54 @@ const ChatRoomList = () => {
     }
   };
 
+  const startEditRoom = (room) => {
+    setEditingRoom(room.id);
+    setEditRoomName(room.name);
+    setEditRoomDescription(room.description || '');
+  };
+
+  const cancelEdit = () => {
+    setEditingRoom(null);
+    setEditRoomName('');
+    setEditRoomDescription('');
+  };
+
+  const updateRoom = async (e, roomId) => {
+    e.preventDefault();
+    if (!editRoomName.trim()) return;
+
+    try {
+      await api.put(`/api/chatrooms/${roomId}`, {
+        name: editRoomName.trim(),
+        description: editRoomDescription.trim() || null
+      });
+      
+      cancelEdit();
+      loadChatRooms();
+      loadMyRooms();
+      setError('');
+    } catch (err) {
+      setError('Failed to update chat room');
+      console.error('Error updating chat room:', err);
+    }
+  };
+
+  const deleteRoom = async (roomId, roomName) => {
+    if (!window.confirm(`Are you sure you want to delete "${roomName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await api.delete(`/api/chatrooms/${roomId}`);
+      loadChatRooms();
+      loadMyRooms();
+      setError('');
+    } catch (err) {
+      setError('Failed to delete chat room');
+      console.error('Error deleting chat room:', err);
+    }
+  };
+
   const openChatRoom = (roomId) => {
     if (!roomId) {
       console.error('Cannot open room: roomId is undefined');
@@ -189,28 +240,79 @@ const ChatRoomList = () => {
               <div className="room-grid">
                 {myRooms.map(room => (
                   <div key={room.id} className="room-card my-room">
-                    <div className="room-info">
-                      <h4>{room.name}</h4>
-                      {room.description && <p className="room-description">{room.description}</p>}
-                      <div className="room-meta">
-                        <span className="member-count">{room.memberCount || 0} members</span>
-                        <span className="created-by">Created by {room.createdBy || 'Unknown'}</span>
-                      </div>
-                    </div>
-                    <div className="room-actions">
-                      <button 
-                        className="open-chat-btn"
-                        onClick={() => openChatRoom(room.id)}
-                      >
-                        Open Chat
-                      </button>
-                      <button 
-                        className="leave-room-btn"
-                        onClick={() => leaveChatRoom(room.id)}
-                      >
-                        Leave
-                      </button>
-                    </div>
+                    {editingRoom === room.id ? (
+                      <form onSubmit={(e) => updateRoom(e, room.id)} className="edit-room-form">
+                        <input
+                          type="text"
+                          value={editRoomName}
+                          onChange={(e) => setEditRoomName(e.target.value)}
+                          placeholder="Room name"
+                          required
+                        />
+                        <textarea
+                          value={editRoomDescription}
+                          onChange={(e) => setEditRoomDescription(e.target.value)}
+                          placeholder="Description (optional)"
+                        />
+                        <div className="edit-actions">
+                          <button type="submit" className="save-btn">Save</button>
+                          <button type="button" onClick={cancelEdit} className="cancel-btn">Cancel</button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div className="room-info">
+                          <h4>{room.name}</h4>
+                          {room.description && <p className="room-description">{room.description}</p>}
+                          <div className="room-meta">
+                            <span className="member-count">{room.memberCount || 0} members</span>
+                            <span className="room-type-badge">{room.type}</span>
+                          </div>
+                        </div>
+                        <div className="room-actions">
+                          <button 
+                            className="open-chat-btn"
+                            onClick={() => openChatRoom(room.id)}
+                          >
+                            Open Chat
+                          </button>
+                          {user?.role === 'class_rep' && room.type === 'group' && (
+                            <>
+                              <button 
+                                className="edit-room-btn icon-btn"
+                                onClick={() => startEditRoom(room)}
+                                title="Edit room"
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                              </button>
+                              <button 
+                                className="delete-room-btn icon-btn"
+                                onClick={() => deleteRoom(room.id, room.name)}
+                                title="Delete room"
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6"></polyline>
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                                </svg>
+                              </button>
+                            </>
+                          )}
+                          {room.type === 'group' && (
+                            <button 
+                              className="leave-room-btn"
+                              onClick={() => leaveChatRoom(room.id)}
+                            >
+                              Leave
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
