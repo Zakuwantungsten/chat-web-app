@@ -100,6 +100,18 @@ const Sidebar = ({ isOpen, onClose }) => {
     }
   };
 
+  const getChatDisplayName = (room) => {
+    // For individual chats, show only the other person's name
+    if (room.type === 'individual' && room.members && Array.isArray(room.members)) {
+      const otherMember = room.members.find(member => member.id !== user?.id);
+      if (otherMember) {
+        return `${otherMember.firstName || ''} ${otherMember.lastName || ''}`.trim() || otherMember.username || 'Unknown User';
+      }
+    }
+    // For group chats or if no members info, return the room name
+    return room.name || 'Unnamed Room';
+  };
+
   const formatTime = (timestamp) => {
     if (!timestamp) return '';
     const date = new Date(timestamp);
@@ -159,31 +171,34 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
       ) : (
         <ul className="chat-list">
-          {chatRooms.map(room => (
-            <li 
-              key={room.id} 
-              className={`chat-item ${activeRoomId && room.id === parseInt(activeRoomId) ? 'active' : ''} ${room.unreadCount > 0 ? 'unread' : ''}`}
-              onClick={() => handleChatClick(room.id)}
-            >
-              <div className="chat-avatar">
-                {room.name?.charAt(0) || '?'}
-              </div>
-              <div className="chat-details">
-                <div className="chat-info">
-                  <h4 className="chat-name">{room.name || 'Unnamed Room'}</h4>
-                  <span className="chat-time">
-                    {formatTime(room.lastMessageTime || room.updatedAt)}
-                  </span>
+          {chatRooms.map(room => {
+            const displayName = getChatDisplayName(room);
+            return (
+              <li 
+                key={room.id} 
+                className={`chat-item ${activeRoomId && room.id === parseInt(activeRoomId) ? 'active' : ''} ${room.unreadCount > 0 ? 'unread' : ''}`}
+                onClick={() => handleChatClick(room.id)}
+              >
+                <div className="chat-avatar">
+                  {displayName.charAt(0) || '?'}
                 </div>
-                <p className="last-message">
-                  {room.lastMessage?.content || room.description || 'No messages yet'}
-                </p>
-              </div>
-              {room.unreadCount > 0 && (
-                <span className="unread-count">{room.unreadCount}</span>
-              )}
-            </li>
-          ))}
+                <div className="chat-details">
+                  <div className="chat-info">
+                    <h4 className="chat-name">{displayName}</h4>
+                    <span className="chat-time">
+                      {formatTime(room.lastMessageTime || room.updatedAt)}
+                    </span>
+                  </div>
+                  <p className="last-message">
+                    {room.lastMessage?.content || room.description || 'No messages yet'}
+                  </p>
+                </div>
+                {room.unreadCount > 0 && (
+                  <span className="unread-count">{room.unreadCount}</span>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </aside>
