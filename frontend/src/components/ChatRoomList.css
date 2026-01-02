@@ -194,10 +194,22 @@
 
 .room-actions {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.action-buttons-left {
+  display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
 
+.action-icons-right {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
 .room-actions button {
   padding: 0.5rem 1rem;
   border: none;
@@ -260,34 +272,29 @@
   align-items: center;
   justify-content: center;
   border: none;
-  padding: 0.5rem;
-  border-radius: 4px;
+  padding: 0.25rem;
+  margin: 0;
+  background: transparent;
   cursor: pointer;
-  transition: all 0.3s;
-  width: 36px;
-  height: 36px;
+  transition: all 0.2s;
 }
 
 .edit-room-btn.icon-btn {
-  background-color: #007bff;
-  color: white;
+  color: #007bff;
 }
 
 .edit-room-btn.icon-btn:hover {
-  background-color: #0056b3;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+  color: #0056b3;
+  transform: scale(1.15);
 }
 
 .delete-room-btn.icon-btn {
-  background-color: #dc3545;
-  color: white;
+  color: #dc3545;
 }
 
 .delete-room-btn.icon-btn:hover {
-  background-color: #c82333;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+  color: #c82333;
+  transform: scale(1.15);
 }
 
 .icon-btn svg {

@@ -270,14 +270,24 @@ const ChatRoomList = () => {
                           </div>
                         </div>
                         <div className="room-actions">
-                          <button 
-                            className="open-chat-btn"
-                            onClick={() => openChatRoom(room.id)}
-                          >
-                            Open Chat
-                          </button>
+                          <div className="action-buttons-left">
+                            <button 
+                              className="open-chat-btn"
+                              onClick={() => openChatRoom(room.id)}
+                            >
+                              Open Chat
+                            </button>
+                            {room.type === 'group' && (
+                              <button 
+                                className="leave-room-btn"
+                                onClick={() => leaveChatRoom(room.id)}
+                              >
+                                Leave
+                              </button>
+                            )}
+                          </div>
                           {user?.role === 'class_rep' && room.type === 'group' && (
-                            <>
+                            <div className="action-icons-right">
                               <button 
                                 className="edit-room-btn icon-btn"
                                 onClick={() => startEditRoom(room)}
@@ -300,15 +310,7 @@ const ChatRoomList = () => {
                                   <line x1="14" y1="11" x2="14" y2="17"></line>
                                 </svg>
                               </button>
-                            </>
-                          )}
-                          {room.type === 'group' && (
-                            <button 
-                              className="leave-room-btn"
-                              onClick={() => leaveChatRoom(room.id)}
-                            >
-                              Leave
-                            </button>
+                            </div>
                           )}
                         </div>
                       </>
