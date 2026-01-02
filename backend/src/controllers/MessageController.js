@@ -239,7 +239,7 @@ class MessageController {
     try {
       const { roomId } = req.params;
       const userId = req.user.id;
-      const { messageId } = req.body; // Optional: specific message ID, otherwise marks all as read
+      const messageId = req.body?.messageId; // Optional: specific message ID, otherwise marks all as read
 
       // Check if user is a member of the chat room
       const membership = await UserChatRoom.findOne({

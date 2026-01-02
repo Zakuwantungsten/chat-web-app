@@ -65,7 +65,6 @@ const ChatInterface = () => {
       loadChatRoom();
       loadMessages();
       checkUserMembership();
-      markAsRead();
     }
     
     // Cleanup: clear active chat room when component unmounts
@@ -74,9 +73,16 @@ const ChatInterface = () => {
     };
   }, [roomId]);
 
+  // Mark messages as read after chat room and user membership are loaded
+  useEffect(() => {
+    if (roomId && chatRoom && isUserInRoom) {
+      markAsRead();
+    }
+  }, [roomId, chatRoom, isUserInRoom]);
+
   const markAsRead = async () => {
     try {
-      await api.post(`/api/messages/${roomId}/read`);
+      await api.post(`/api/messages/${roomId}/read`, {});
     } catch (err) {
       console.error('Error marking messages as read:', err);
     }
