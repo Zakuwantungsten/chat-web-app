@@ -132,7 +132,8 @@ const ChatInterface = () => {
   const loadChatRoom = async () => {
     try {
       const response = await api.get(`/api/chatrooms/${roomId}`);
-      const roomData = response.data;
+      const roomData = response.data.data || response.data;
+      console.log('Chat room data:', roomData); // Debug log
       setChatRoom(roomData);
       
       // Set active chat room in context for header
@@ -248,11 +249,19 @@ const ChatInterface = () => {
   };
 
   const getChatDisplayName = () => {
-    if (!chatRoom) return '';
+    if (!chatRoom) {
+      console.log('No chatRoom data');
+      return 'Loading...';
+    }
+    
+    console.log('Chat room type:', chatRoom.type);
+    console.log('Chat room members:', chatRoom.members);
+    console.log('Current user:', user?.id);
     
     // For individual chats, show only the other person's name
     if (chatRoom.type === 'individual' && chatRoom.members && Array.isArray(chatRoom.members)) {
       const otherMember = chatRoom.members.find(member => member.id !== user?.id);
+      console.log('Other member:', otherMember);
       if (otherMember) {
         return `${otherMember.firstName || ''} ${otherMember.lastName || ''}`.trim() || otherMember.username || 'Unknown User';
       }
