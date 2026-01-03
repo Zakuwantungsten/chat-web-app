@@ -1,0 +1,2242 @@
+# TAHMEED TRANSPORTERS FUEL MANAGEMENT SYSTEM
+## Complete Microsoft Access Database Design & Implementation Guide
+
+---
+
+## TABLE OF CONTENTS
+1. Database Architecture Overview
+2. Table Structures & Relationships
+3. Forms Design & Implementation
+4. Queries & Automation
+5. Reports & Document Generation
+6. VBA Code Modules
+7. User Interface Navigation
+8. Implementation Steps
+9. Testing & Validation
+
+---
+
+## 1. DATABASE ARCHITECTURE OVERVIEW
+
+### System Components
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    MASTER DATA TABLES                        │
+│  • tbl_Trucks          • tbl_Stations                       │
+│  • tbl_Routes          • tbl_Users                          │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│                   TRANSACTION TABLES                         │
+│  • tbl_FuelRecords     • tbl_LPO                            │
+│  • tbl_LPODetails      • tbl_LPOSummary                     │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│                    AUTOMATION LAYER                          │
+│  • Queries             • VBA Modules                        │
+│  • Forms               • Reports                            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 2. TABLE STRUCTURES & RELATIONSHIPS
+
+### 2.1 MASTER DATA TABLES
+
+#### **tbl_Trucks**
+```
+Field Name          Data Type       Size    Properties
+─────────────────────────────────────────────────────────
+TruckID            AutoNumber              Primary Key
+TruckNo            Text            20      Required, Indexed (No Duplicates)
+TruckBatch         Text            20      Required (100, 80, 60)
+ExtraFuel          Number (Int)            Default based on batch
+Status             Text            20      Active/Inactive/Maintenance
+DateAdded          Date/Time               Default = Now()
+AddedBy            Text            50
+Notes              Memo
+```
+
+**Validation Rule for TruckBatch:**
+```vba
+In ("100","80","60")
+```
+
+**Default Value for ExtraFuel:**
+```vba
+=IIf([TruckBatch]="100",100,IIf([TruckBatch]="80",80,60))
+```
+
+---
+
+#### **tbl_Stations**
+```
+Field Name          Data Type       Size    Properties
+─────────────────────────────────────────────────────────
+StationID          AutoNumber              Primary Key
+StationName        Text            100     Required, Indexed (No Duplicates)
+StationType        Text            50      Yard/Checkpoint/Border
+CurrentRate        Currency                Rate per liter
+Location           Text            100
+ContactPerson      Text            100
+PhoneNumber        Text            20
+IsActive           Yes/No                  Default = Yes
+LastUpdated        Date/Time               Default = Now()
+```
+
+**Common Station Names:**
+- LAKE KAPIRI
+- LAKE NDOLA
+- LAKE TUNDUMA
+- CASH
+- INFINITY
+- GBP MOROGORO
+- GBP KANGE
+
+---
+
+#### **tbl_Routes**
+```
+Field Name          Data Type       Size    Properties
+─────────────────────────────────────────────────────────
+RouteID            AutoNumber              Primary Key
+RouteName          Text            100     Required
+StartPoint         Text            50      DAR/TANGA
+Destination        Text            100     Required
+TotalLiters        Number (Int)            Required
+RouteCode          Text            20      Unique identifier
+IsActive           Yes/No                  Default = Yes
+Notes              Memo
+```
+
+**Sample Routes Data:**
+```
+RouteName               StartPoint    Destination      TotalLiters
+─────────────────────────────────────────────────────────────────
+DAR-LUBUMBASHI         DAR           LUBUMBASHI       2100
+DAR-LIKASI             DAR           LIKASI           2200
+DAR-KAMBOVE            DAR           KAMBOVE          2220
+DAR-FUNGURUME          DAR           FUNGURUME        2300
+DAR-KINSANFU           DAR           KINSANFU         2360
+DAR-KOLWEZI            DAR           KOLWEZI          2400
+DAR-KAMOA              DAR           KAMOA            2440
+DAR-LUSAKA             DAR           LUSAKA           1900
+```
+
+---
+
+#### **tbl_Users**
+```
+Field Name          Data Type       Size    Properties
+─────────────────────────────────────────────────────────
+UserID             AutoNumber              Primary Key
+Username           Text            50      Required, Indexed (No Duplicates)
+FullName           Text            100     Required
+UserRole           Text            50      Required
+Password           Text            100     Encrypted (we'll use simple encoding)
+IsActive           Yes/No                  Default = Yes
+DateCreated        Date/Time               Default = Now()
+LastLogin          Date/Time
+Email              Text            100
+PhoneNumber        Text            20
+```
+
+**User Roles:**
+- Admin
+- Fuel Order Maker
+- Yard Attendant
+- Station Manager
+- Viewer
+
+---
+
+### 2.2 TRANSACTION TABLES
+
+#### **tbl_FuelRecords**
+```
+Field Name              Data Type       Size    Properties
+──────────────────────────────────────────────────────────────
+FuelRecordID           AutoNumber              Primary Key
+RecordDate             Date/Time               Required, Indexed
+TruckID                Number (Long)           Foreign Key → tbl_Trucks
+TruckNo                Text            20      Lookup from tbl_Trucks
+GoingDO                Text            20
+ReturnDO               Text            20
+StartLocation          Text            50      DAR/TANGA
+FromLocation           Text            100
+ToLocation             Text            100
+RouteID                Number (Long)           Foreign Key → tbl_Routes
+TotalLiters            Number (Int)            Required
+ExtraFuel              Number (Int)            Auto-filled from truck
+MMSAYard               Number (Int)            Default = 0
+TangaYard              Number (Int)            Default = 0
+DarYard                Number (Int)            Default = 0
+DarGoing               Number (Int)            Default = 0
+MoroGoing              Number (Int)            Default = 0
+MbeyaGoing             Number (Int)            Default = 0
+TdmGoing               Number (Int)            Default = 0
+ZambiaGoing            Number (Int)            Default = 0
+CongoFuel              Number (Int)            Default = 0
+ZambiaReturn           Number (Int)            Default = 0
+TundumaReturn          Number (Int)            Default = 0
+MbeyaReturn            Number (Int)            Default = 0
+MoroReturn             Number (Int)            Default = 0
+DarReturn              Number (Int)            Default = 0
+TangaReturn            Number (Int)            Default = 0
+Balance                Number (Int)            Calculated field
+RecordStatus           Text            20      Active/Completed/Cancelled
+CreatedBy              Text            50
+CreatedDate            Date/Time               Default = Now()
+ModifiedBy             Text            50
+ModifiedDate           Date/Time
+Notes                  Memo
+```
+
+**Calculated Field - Balance:**
+```vba
+=[TotalLiters] + [ExtraFuel] + [MMSAYard] + [TangaYard] + [DarYard] + [DarGoing] + 
+[MoroGoing] + [MbeyaGoing] + [TdmGoing] + [ZambiaGoing] + [CongoFuel] + [ZambiaReturn] + 
+[TundumaReturn] + [MbeyaReturn] + [MoroReturn] + [DarReturn] + [TangaReturn]
+```
+
+**Note:** All fuel columns use negative values for fuel given out, so balance calculation sums them.
+
+---
+
+#### **tbl_LPO**
+```
+Field Name          Data Type       Size    Properties
+─────────────────────────────────────────────────────────
+LPOID              AutoNumber              Primary Key
+LPONumber          Text            20      Required, Indexed (No Duplicates)
+LPODate            Date/Time               Required, Default = Now()
+StationID          Number (Long)           Foreign Key → tbl_Stations
+StationName        Text            100     Lookup from tbl_Stations
+OrderFor           Text            100     Default = "TAHMEED"
+LPOStatus          Text            20      Draft/Sent/Completed/Cancelled
+TotalAmount        Currency                Calculated from details
+TotalLiters        Number (Int)            Calculated from details
+CreatedBy          Text            50
+CreatedDate        Date/Time               Default = Now()
+ModifiedBy         Text            50
+ModifiedDate       Date/Time
+SentDate           Date/Time
+SentVia            Text            50      WhatsApp/Email/System
+Notes              Memo
+```
+
+---
+
+#### **tbl_LPODetails**
+```
+Field Name          Data Type       Size    Properties
+─────────────────────────────────────────────────────────
+LPODetailID        AutoNumber              Primary Key
+LPOID              Number (Long)           Foreign Key → tbl_LPO, Required
+FuelRecordID       Number (Long)           Foreign Key → tbl_FuelRecords
+DONumber           Text            20
+TruckID            Number (Long)           Foreign Key → tbl_Trucks
+TruckNo            Text            20      Lookup from tbl_Trucks
+Liters             Number (Int)            Required, >0
+RatePerLiter       Currency                Required
+Amount             Currency                Calculated: [Liters]*[RatePerLiter]
+Destination        Text            100
+CheckpointColumn   Text            50      Which fuel record column this updates
+LineStatus         Text            20      Active/Cancelled
+Notes              Memo
+```
+
+---
+
+#### **tbl_LPOSummary**
+```
+Field Name          Data Type       Size    Properties
+─────────────────────────────────────────────────────────
+SummaryID          AutoNumber              Primary Key
+SerialNo           Number (Long)           Auto-increment per month
+SummaryDate        Date/Time               From LPO
+LPONumber          Text            20      From LPO
+StationName        Text            100     From LPO
+DONumber           Text            20      From LPODetails
+TruckNo            Text            20      From LPODetails
+Liters             Number (Int)            From LPODetails
+PricePerLiter      Currency                From LPODetails
+TotalAmount        Currency                Calculated
+Destination        Text            100     From LPODetails
+Month              Number (Int)            Extracted from date
+Year               Number (Int)            Extracted from date
+MonthName          Text            20      Format([SummaryDate],"mmmm")
+Status             Text            20      Active/Cancelled
+CreatedDate        Date/Time               Default = Now()
+```
+
+---
+
+### 2.3 RELATIONSHIPS DIAGRAM
+
+```
+tbl_Trucks (1) ────────→ (∞) tbl_FuelRecords
+    ↓
+    └─────────────────→ (∞) tbl_LPODetails
+
+tbl_Routes (1) ────────→ (∞) tbl_FuelRecords
+
+tbl_Stations (1) ──────→ (∞) tbl_LPO
+
+tbl_LPO (1) ───────────→ (∞) tbl_LPODetails
+    ↓
+    └─────────────────→ (∞) tbl_LPOSummary (via query)
+
+tbl_FuelRecords (1) ───→ (∞) tbl_LPODetails
+
+tbl_Users ──────────────→ All tables (CreatedBy field)
+```
+
+**Relationship Properties:**
+- Enforce Referential Integrity: YES
+- Cascade Update Related Fields: YES
+- Cascade Delete Related Records: NO (for data integrity)
+
+---
+
+## 3. FORMS DESIGN & IMPLEMENTATION
+
+### 3.1 MAIN SWITCHBOARD (frm_MainMenu)
+
+**Form Type:** Unbound Form
+**Layout:** Single Form View
+**Properties:**
+- Pop Up: Yes
+- Modal: No
+- Record Selectors: No
+- Navigation Buttons: No
+- Scroll Bars: Neither
+- Auto Center: Yes
+- Border Style: Dialog
+
+**Controls Layout:**
+```
+┌─────────────────────────────────────────────────────────┐
+│    TAHMEED TRANSPORTERS FUEL MANAGEMENT SYSTEM          │
+│    ═══════════════════════════════════════════════      │
+│                                                          │
+│    Welcome: [CurrentUserName]  Date: [Today's Date]     │
+│                                                          │
+│    ┌──────────────┐  ┌──────────────┐                  │
+│    │ FUEL RECORDS │  │   LPO MGMT   │                  │
+│    │              │  │              │                  │
+│    └──────────────┘  └──────────────┘                  │
+│                                                          │
+│    ┌──────────────┐  ┌──────────────┐                  │
+│    │   REPORTS    │  │   SETTINGS   │                  │
+│    │              │  │              │                  │
+│    └──────────────┘  └──────────────┘                  │
+│                                                          │
+│    ┌──────────────┐  ┌──────────────┐                  │
+│    │ YARD ENTRY   │  │     EXIT     │                  │
+│    │              │  │              │                  │
+│    └──────────────┘  └──────────────┘                  │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+**VBA Code for Main Menu:**
+```vba
+Option Compare Database
+Option Explicit
+
+Private Sub Form_Load()
+    Me.txt_UserName = GetCurrentUser()
+    Me.txt_CurrentDate = Format(Date, "dddd, dd mmmm yyyy")
+End Sub
+
+Private Sub btn_FuelRecords_Click()
+    DoCmd.OpenForm "frm_FuelRecords"
+End Sub
+
+Private Sub btn_LPOManagement_Click()
+    DoCmd.OpenForm "frm_LPO_Main"
+End Sub
+
+Private Sub btn_Reports_Click()
+    DoCmd.OpenForm "frm_ReportMenu"
+End Sub
+
+Private Sub btn_Settings_Click()
+    DoCmd.OpenForm "frm_Settings"
+End Sub
+
+Private Sub btn_YardEntry_Click()
+    DoCmd.OpenForm "frm_YardFuelEntry"
+End Sub
+
+Private Sub btn_Exit_Click()
+    DoCmd.Quit acQuitSaveAll
+End Sub
+
+Private Function GetCurrentUser() As String
+    ' This would integrate with your login system
+    GetCurrentUser = Environ("USERNAME")
+End Function
+```
+
+---
+
+### 3.2 FUEL RECORDS FORM (frm_FuelRecords)
+
+**Form Type:** Bound Form (Record Source: tbl_FuelRecords)
+**Layout:** Continuous Forms / Split Form
+**Allow Additions:** Yes
+**Allow Deletions:** Yes (with confirmation)
+**Allow Edits:** Yes
+
+**Form Header:**
+```
+FUEL RECORDS MANAGEMENT
+═══════════════════════════════════════════════════════
+Search: [txt_Search] 🔍  |  Month: [cmb_Month]  Year: [cmb_Year]  [btn_Filter]
+[btn_NewRecord] [btn_CreateLPO] [btn_Refresh] [btn_Print] [btn_Close]
+```
+
+**Detail Section Layout:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Date: [RecordDate]  Truck: [cmb_TruckNo]  Going DO: [GoingDO]  │
+│ From: [FromLocation]  To: [ToLocation]  Return DO: [ReturnDO]  │
+│                                                                  │
+│ Route: [cmb_Route]  Total Liters: [TotalLiters]               │
+│ Extra Fuel: [ExtraFuel] (Auto)                                 │
+│                                                                  │
+│ ┌─── FUEL DISTRIBUTION ───────────────────────────────────┐   │
+│ │ Yards:                                                   │   │
+│ │   MMSA: [MMSAYard]  Tanga: [TangaYard]  Dar: [DarYard] │   │
+│ │                                                          │   │
+│ │ Going Checkpoints:                                       │   │
+│ │   Dar: [DarGoing]  Moro: [MoroGoing]  Mbeya: [MbeyaGoing]│ │
+│ │   Tdm: [TdmGoing]  Zambia: [ZambiaGoing]                │   │
+│ │   Congo: [CongoFuel]                                     │   │
+│ │                                                          │   │
+│ │ Return Checkpoints:                                      │   │
+│ │   Zambia: [ZambiaReturn]  Tunduma: [TundumaReturn]     │   │
+│ │   Mbeya: [MbeyaReturn]  Moro: [MoroReturn]             │   │
+│ │   Dar: [DarReturn]  Tanga: [TangaReturn]               │   │
+│ └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│ Balance: [Balance] Liters  Status: [RecordStatus]              │
+│ Created By: [CreatedBy]  Date: [CreatedDate]                   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**VBA Code for Fuel Records Form:**
+```vba
+Option Compare Database
+Option Explicit
+
+Private Sub Form_Load()
+    ' Load combo boxes
+    LoadMonthsCombo
+    LoadYearsCombo
+    LoadTrucksCombo
+    LoadRoutesCombo
+    
+    ' Set default filter to current month
+    Me.cmb_Month = Month(Date)
+    Me.cmb_Year = Year(Date)
+    ApplyDateFilter
+End Sub
+
+Private Sub cmb_TruckNo_AfterUpdate()
+    ' Auto-fill truck extra fuel
+    Dim rs As DAO.Recordset
+    Set rs = CurrentDb.OpenRecordset("SELECT ExtraFuel FROM tbl_Trucks WHERE TruckNo = '" & Me.cmb_TruckNo & "'")
+    If Not rs.EOF Then
+        Me.ExtraFuel = rs!ExtraFuel
+    End If
+    rs.Close
+    Set rs = Nothing
+End Sub
+
+Private Sub cmb_Route_AfterUpdate()
+    ' Auto-fill total liters based on route
+    Dim rs As DAO.Recordset
+    Set rs = CurrentDb.OpenRecordset("SELECT TotalLiters, StartPoint, Destination FROM tbl_Routes WHERE RouteID = " & Me.RouteID)
+    If Not rs.EOF Then
+        Me.TotalLiters = rs!TotalLiters
+        Me.StartLocation = rs!StartPoint
+        Me.ToLocation = rs!Destination
+    End If
+    rs.Close
+    Set rs = Nothing
+    
+    ' Calculate initial balance
+    CalculateBalance
+End Sub
+
+Private Sub CalculateBalance()
+    ' Calculate remaining balance
+    Dim balance As Long
+    balance = Nz(Me.TotalLiters, 0) + Nz(Me.ExtraFuel, 0)
+    balance = balance + Nz(Me.MMSAYard, 0) + Nz(Me.TangaYard, 0) + Nz(Me.DarYard, 0)
+    balance = balance + Nz(Me.DarGoing, 0) + Nz(Me.MoroGoing, 0) + Nz(Me.MbeyaGoing, 0)
+    balance = balance + Nz(Me.TdmGoing, 0) + Nz(Me.ZambiaGoing, 0) + Nz(Me.CongoFuel, 0)
+    balance = balance + Nz(Me.ZambiaReturn, 0) + Nz(Me.TundumaReturn, 0)
+    balance = balance + Nz(Me.MbeyaReturn, 0) + Nz(Me.MoroReturn, 0)
+    balance = balance + Nz(Me.DarReturn, 0) + Nz(Me.TangaReturn, 0)
+    
+    Me.Balance = balance
+End Sub
+
+Private Sub Form_BeforeUpdate(Cancel As Integer)
+    ' Set audit fields
+    If Me.NewRecord Then
+        Me.CreatedBy = GetCurrentUser()
+        Me.CreatedDate = Now()
+    Else
+        Me.ModifiedBy = GetCurrentUser()
+        Me.ModifiedDate = Now()
+    End If
+    
+    ' Recalculate balance
+    CalculateBalance
+End Sub
+
+Private Sub btn_CreateLPO_Click()
+    ' Open LPO creation form with this record pre-selected
+    If IsNull(Me.FuelRecordID) Then
+        MsgBox "Please save the fuel record first.", vbExclamation
+        Exit Sub
+    End If
+    
+    DoCmd.OpenForm "frm_LPO_Create", , , , , acDialog, "FuelRecordID=" & Me.FuelRecordID
+End Sub
+
+Private Sub btn_NewRecord_Click()
+    DoCmd.GoToRecord , , acNewRec
+End Sub
+
+Private Sub btn_Refresh_Click()
+    Me.Requery
+End Sub
+
+Private Sub btn_Filter_Click()
+    ApplyDateFilter
+End Sub
+
+Private Sub ApplyDateFilter()
+    Dim strFilter As String
+    If Not IsNull(Me.cmb_Month) And Not IsNull(Me.cmb_Year) Then
+        strFilter = "Month([RecordDate]) = " & Me.cmb_Month & " AND Year([RecordDate]) = " & Me.cmb_Year
+        Me.Filter = strFilter
+        Me.FilterOn = True
+    Else
+        Me.FilterOn = False
+    End If
+End Sub
+
+Private Sub txt_Search_Change()
+    ' Dynamic search
+    Dim strSearch As String
+    If Len(Me.txt_Search) > 0 Then
+        strSearch = "TruckNo LIKE '*" & Me.txt_Search & "*' OR " & _
+                   "GoingDO LIKE '*" & Me.txt_Search & "*' OR " & _
+                   "ReturnDO LIKE '*" & Me.txt_Search & "*'"
+        Me.Filter = strSearch
+        Me.FilterOn = True
+    Else
+        Me.FilterOn = False
+    End If
+End Sub
+
+Private Sub LoadMonthsCombo()
+    Me.cmb_Month.RowSource = "1;2;3;4;5;6;7;8;9;10;11;12"
+End Sub
+
+Private Sub LoadYearsCombo()
+    Dim i As Integer
+    Dim yearList As String
+    For i = Year(Date) - 2 To Year(Date) + 1
+        yearList = yearList & i & ";"
+    Next i
+    Me.cmb_Year.RowSource = Left(yearList, Len(yearList) - 1)
+End Sub
+
+Private Sub LoadTrucksCombo()
+    Me.cmb_TruckNo.RowSource = "SELECT TruckID, TruckNo FROM tbl_Trucks WHERE Status='Active' ORDER BY TruckNo"
+End Sub
+
+Private Sub LoadRoutesCombo()
+    Me.cmb_Route.RowSource = "SELECT RouteID, RouteName FROM tbl_Routes WHERE IsActive=True ORDER BY RouteName"
+End Sub
+
+Private Sub btn_Close_Click()
+    DoCmd.Close acForm, Me.Name
+End Sub
+```
+
+---
+
+### 3.3 LPO CREATION FORM (frm_LPO_Create)
+
+**Form Type:** Unbound Header with Subform
+**Layout:** Single Form
+**Pop Up:** Yes
+**Modal:** Yes
+
+**Form Design:**
+```
+┌──────────────────────────────────────────────────────────────┐
+│                  CREATE NEW LPO                               │
+│  ══════════════════════════════════════════════════════       │
+│                                                               │
+│  LPO No: [txt_LPONumber] (Auto)    Date: [txt_LPODate]      │
+│  Station: [cmb_Station] ▼          Order For: [txt_OrderFor]│
+│                                                               │
+│  ┌─── SELECT TRUCKS FOR THIS LPO ──────────────────────┐    │
+│  │ Available Fuel Records:                              │    │
+│  │ [lst_AvailableRecords - Multi-select listbox]       │    │
+│  │                                                       │    │
+│  │ [btn_AddToLPO >>]  [btn_RemoveFromLPO <<]           │    │
+│  └───────────────────────────────────────────────────────┘    │
+│                                                               │
+│  ┌─── LPO DETAILS ──────────────────────────────────────┐    │
+│  │ [subfrm_LPODetails - Datasheet view]                 │    │
+│  │ DO No. | Truck No. | Liters | Rate | Amount | Dest.  │    │
+│  │ ────────────────────────────────────────────────────  │    │
+│  │ [Detail rows]                                         │    │
+│  │                                                       │    │
+│  │ Total Liters: [txt_TotalLiters]                      │    │
+│  │ Total Amount: [txt_TotalAmount]                      │    │
+│  └───────────────────────────────────────────────────────┘    │
+│                                                               │
+│  Checkpoint Column: [cmb_CheckpointColumn] ▼                 │
+│  (Which fuel record column to update)                        │
+│                                                               │
+│  [btn_Save] [btn_SaveAndPrint] [btn_Cancel]                 │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**VBA Code for LPO Creation:**
+```vba
+Option Compare Database
+Option Explicit
+
+Private Sub Form_Load()
+    ' Generate new LPO number
+    Me.txt_LPONumber = GenerateNewLPONumber()
+    Me.txt_LPODate = Date
+    Me.txt_OrderFor = "TAHMEED"
+    
+    ' Load stations
+    Me.cmb_Station.RowSource = "SELECT StationID, StationName FROM tbl_Stations WHERE IsActive=True ORDER BY StationName"
+    
+    ' Load checkpoint columns
+    LoadCheckpointColumns
+    
+    ' Load available fuel records
+    LoadAvailableFuelRecords
+    
+    ' Check if opened from fuel record
+    If Not IsNull(Me.OpenArgs) Then
+        Dim preselectedID As Long
+        preselectedID = CLng(Replace(Me.OpenArgs, "FuelRecordID=", ""))
+        ' Pre-select this record
+        SelectFuelRecord preselectedID
+    End If
+End Sub
+
+Private Function GenerateNewLPONumber() As String
+    Dim rs As DAO.Recordset
+    Dim maxLPO As Long
+    
+    Set rs = CurrentDb.OpenRecordset("SELECT MAX(Val(LPONumber)) AS MaxLPO FROM tbl_LPO")
+    If Not rs.EOF Then
+        If Not IsNull(rs!MaxLPO) Then
+            maxLPO = rs!MaxLPO + 1
+        Else
+            maxLPO = 2361 ' Starting number
+        End If
+    End If
+    rs.Close
+    Set rs = Nothing
+    
+    GenerateNewLPONumber = CStr(maxLPO)
+End Function
+
+Private Sub LoadCheckpointColumns()
+    Dim colList As String
+    colList = "DarGoing;MoroGoing;MbeyaGoing;TdmGoing;ZambiaGoing;CongoFuel;" & _
+              "ZambiaReturn;TundumaReturn;MbeyaReturn;MoroReturn;DarReturn;TangaReturn"
+    Me.cmb_CheckpointColumn.RowSource = colList
+End Sub
+
+Private Sub LoadAvailableFuelRecords()
+    ' Load fuel records with remaining balance
+    Dim strSQL As String
+    strSQL = "SELECT FuelRecordID, RecordDate, TruckNo, GoingDO, ReturnDO, ToLocation, Balance " & _
+             "FROM tbl_FuelRecords " & _
+             "WHERE Balance <> 0 AND RecordStatus = 'Active' " & _
+             "ORDER BY RecordDate DESC"
+    
+    Me.lst_AvailableRecords.RowSource = strSQL
+    Me.lst_AvailableRecords.ColumnCount = 7
+    Me.lst_AvailableRecords.ColumnWidths = "0;1in;1in;0.8in;0.8in;1.2in;0.8in"
+End Sub
+
+Private Sub cmb_Station_AfterUpdate()
+    ' Get current rate for selected station
+    Dim rs As DAO.Recordset
+    Set rs = CurrentDb.OpenRecordset("SELECT CurrentRate FROM tbl_Stations WHERE StationID = " & Me.cmb_Station)
+    If Not rs.EOF Then
+        ' This rate will be used for new detail lines
+        Me.Tag = rs!CurrentRate
+    End If
+    rs.Close
+    Set rs = Nothing
+End Sub
+
+Private Sub btn_AddToLPO_Click()
+    ' Add selected fuel records to LPO details
+    Dim varItem As Variant
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim rsFuel As DAO.Recordset
+    
+    If Me.lst_AvailableRecords.ItemsSelected.Count = 0 Then
+        MsgBox "Please select at least one fuel record.", vbExclamation
+        Exit Sub
+    End If
+    
+    If IsNull(Me.cmb_Station) Then
+        MsgBox "Please select a station first.", vbExclamation
+        Exit Sub
+    End If
+    
+    If IsNull(Me.cmb_CheckpointColumn) Then
+        MsgBox "Please select which checkpoint column to update.", vbExclamation
+        Exit Sub
+    End If
+    
+    Set db = CurrentDb
+    
+    ' First, save the LPO header if it's new
+    If DCount("*", "tbl_LPO", "LPONumber = '" & Me.txt_LPONumber & "'") = 0 Then
+        Set rs = db.OpenRecordset("tbl_LPO", dbOpenDynaset)
+        rs.AddNew
+        rs!LPONumber = Me.txt_LPONumber
+        rs!LPODate = Me.txt_LPODate
+        rs!StationID = Me.cmb_Station
+        rs!OrderFor = Me.txt_OrderFor
+        rs!LPOStatus = "Draft"
+        rs!CreatedBy = GetCurrentUser()
+        rs!CreatedDate = Now()
+        rs.Update
+        rs.Close
+    End If
+    
+    ' Get LPOID
+    Dim lpoID As Long
+    lpoID = DLookup("LPOID", "tbl_LPO", "LPONumber = '" & Me.txt_LPONumber & "'")
+    
+    ' Add detail lines
+    Set rs = db.OpenRecordset("tbl_LPODetails", dbOpenDynaset)
+    
+    For Each varItem In Me.lst_AvailableRecords.ItemsSelected
+        Dim fuelRecordID As Long
+        fuelRecordID = Me.lst_AvailableRecords.Column(0, varItem)
+        
+        ' Get fuel record details
+        Set rsFuel = db.OpenRecordset("SELECT * FROM tbl_FuelRecords WHERE FuelRecordID = " & fuelRecordID)
+        If Not rsFuel.EOF Then
+            rs.AddNew
+            rs!LPOID = lpoID
+            rs!FuelRecordID = fuelRecordID
+            rs!DONumber = Nz(rsFuel!GoingDO, rsFuel!ReturnDO)
+            rs!TruckID = rsFuel!TruckID
+            rs!TruckNo = rsFuel!TruckNo
+            rs!Liters = rsFuel!Balance ' Default to remaining balance
+            rs!RatePerLiter = CDbl(Me.Tag) ' Rate from station
+            rs!Destination = rsFuel!ToLocation
+            rs!CheckpointColumn = Me.cmb_CheckpointColumn
+            rs!LineStatus = "Active"
+            rs.Update
+        End If
+        rsFuel.Close
+    Next varItem
+    
+    rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    
+    ' Refresh subform and available records
+    Me.subfrm_LPODetails.Requery
+    LoadAvailableFuelRecords
+    CalculateTotals
+    
+    MsgBox "Trucks added to LPO successfully.", vbInformation
+End Sub
+
+Private Sub btn_RemoveFromLPO_Click()
+    ' Remove selected detail line
+    If IsNull(Me.subfrm_LPODetails.Form!LPODetailID) Then
+        MsgBox "Please select a line to remove.", vbExclamation
+        Exit Sub
+    End If
+    
+    If MsgBox("Remove this truck from the LPO?", vbQuestion + vbYesNo) = vbYes Then
+        CurrentDb.Execute "DELETE FROM tbl_LPODetails WHERE LPODetailID = " & Me.subfrm_LPODetails.Form!LPODetailID
+        Me.subfrm_LPODetails.Requery
+        LoadAvailableFuelRecords
+        CalculateTotals
+    End If
+End Sub
+
+Private Sub CalculateTotals()
+    ' Calculate total liters and amount
+    Dim rs As DAO.Recordset
+    Set rs = CurrentDb.OpenRecordset("SELECT SUM(Liters) AS TotLiters, SUM(Amount) AS TotAmount " & _
+                                      "FROM tbl_LPODetails WHERE LPOID = " & _
+                                      "(SELECT LPOID FROM tbl_LPO WHERE LPONumber = '" & Me.txt_LPONumber & "')")
+    If Not rs.EOF Then
+        Me.txt_TotalLiters = Nz(rs!TotLiters, 0)
+        Me.txt_TotalAmount = Nz(rs!TotAmount, 0)
+    End If
+    rs.Close
+    Set rs = Nothing
+End Sub
+
+Private Sub btn_Save_Click()
+    If SaveLPO() Then
+        MsgBox "LPO saved successfully!", vbInformation
+        DoCmd.Close acForm, Me.Name
+    End If
+End Sub
+
+Private Sub btn_SaveAndPrint_Click()
+    If SaveLPO() Then
+        ' Open report for printing
+        DoCmd.OpenReport "rpt_LPO", acViewPreview, , "LPONumber = '" & Me.txt_LPONumber & "'"
+        DoCmd.Close acForm, Me.Name
+    End If
+End Sub
+
+Private Function SaveLPO() As Boolean
+    On Error GoTo Err_Handler
+    
+    ' Validate
+    If DCount("*", "tbl_LPODetails", "LPOID = (SELECT LPOID FROM tbl_LPO WHERE LPONumber = '" & Me.txt_LPONumber & "')") = 0 Then
+        MsgBox "Please add at least one truck to the LPO.", vbExclamation
+        SaveLPO = False
+        Exit Function
+    End If
+    
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim rsDetail As DAO.Recordset
+    Dim rsFuel As DAO.Recordset
+    
+    Set db = CurrentDb
+    db.BeginTrans
+    
+    ' Update LPO header with totals
+    Set rs = db.OpenRecordset("SELECT * FROM tbl_LPO WHERE LPONumber = '" & Me.txt_LPONumber & "'", dbOpenDynaset)
+    If Not rs.EOF Then
+        rs.Edit
+        rs!TotalLiters = Me.txt_TotalLiters
+        rs!TotalAmount = Me.txt_TotalAmount
+        rs!LPOStatus = "Sent"
+        rs!SentDate = Now()
+        rs!SentVia = "System"
+        rs!ModifiedBy = GetCurrentUser()
+        rs!ModifiedDate = Now()
+        rs.Update
+    End If
+    rs.Close
+    
+    ' Update fuel records with LPO amounts
+    Set rsDetail = db.OpenRecordset("SELECT * FROM tbl_LPODetails WHERE LPOID = " & _
+                                     "(SELECT LPOID FROM tbl_LPO WHERE LPONumber = '" & Me.txt_LPONumber & "')")
+    
+    While Not rsDetail.EOF
+        Set rsFuel = db.OpenRecordset("SELECT * FROM tbl_FuelRecords WHERE FuelRecordID = " & rsDetail!FuelRecordID, dbOpenDynaset)
+        If Not rsFuel.EOF Then
+            rsFuel.Edit
+            ' Update the specific checkpoint column with negative value (fuel given out)
+            rsFuel(rsDetail!CheckpointColumn) = -rsDetail!Liters
+            rsFuel!ModifiedBy = GetCurrentUser()
+            rsFuel!ModifiedDate = Now()
+            rsFuel.Update
+        End If
+        rsFuel.Close
+        rsDetail.MoveNext
+    Wend
+    rsDetail.Close
+    
+    ' Create LPO summary entries
+    Call CreateLPOSummaryEntries(Me.txt_LPONumber)
+    
+    db.CommitTrans
+    SaveLPO = True
+    Exit Function
+    
+Err_Handler:
+    db.Rollback
+    MsgBox "Error saving LPO: " & Err.Description, vbCritical
+    SaveLPO = False
+End Function
+
+Private Sub CreateLPOSummaryEntries(lpoNumber As String)
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim rsDetail As DAO.Recordset
+    Dim serialNo As Long
+    
+    Set db = CurrentDb
+    
+    ' Get next serial number for this month
+    serialNo = Nz(DMax("SerialNo", "tbl_LPOSummary", "Month = " & Month(Date) & " AND Year = " & Year(Date)), 0)
+    
+    ' Get LPO details
+    Set rsDetail = db.OpenRecordset("SELECT d.*, l.LPODate, l.StationName " & _
+                                     "FROM tbl_LPODetails d INNER JOIN tbl_LPO l ON d.LPOID = l.LPOID " & _
+                                     "WHERE l.LPONumber = '" & lpoNumber & "'")
+    
+    Set rs = db.OpenRecordset("tbl_LPOSummary", dbOpenDynaset)
+    
+    While Not rsDetail.EOF
+        serialNo = serialNo + 1
+        
+        rs.AddNew
+        rs!SerialNo = serialNo
+        rs!SummaryDate = rsDetail!LPODate
+        rs!LPONumber = lpoNumber
+        rs!StationName = rsDetail!StationName
+        rs!DONumber = rsDetail!DONumber
+        rs!TruckNo = rsDetail!TruckNo
+        rs!Liters = rsDetail!Liters
+        rs!PricePerLiter = rsDetail!RatePerLiter
+        rs!TotalAmount = rsDetail!Amount
+        rs!Destination = rsDetail!Destination
+        rs!Month = Month(rsDetail!LPODate)
+        rs!Year = Year(rsDetail!LPODate)
+        rs!MonthName = Format(rsDetail!LPODate, "mmmm")
+        rs!Status = "Active"
+        rs!CreatedDate = Now()
+        rs.Update
+        
+        rsDetail.MoveNext
+    Wend
+    
+    rs.Close
+    rsDetail.Close
+    Set rs = Nothing
+    Set rsDetail = Nothing
+    Set db = Nothing
+End Sub
+
+Private Sub btn_Cancel_Click()
+    If MsgBox("Cancel LPO creation? Unsaved changes will be lost.", vbQuestion + vbYesNo) = vbYes Then
+        ' Delete draft LPO
+        CurrentDb.Execute "DELETE FROM tbl_LPODetails WHERE LPOID = (SELECT LPOID FROM tbl_LPO WHERE LPONumber = '" & Me.txt_LPONumber & "')"
+        CurrentDb.Execute "DELETE FROM tbl_LPO WHERE LPONumber = '" & Me.txt_LPONumber & "'"
+        DoCmd.Close acForm, Me.Name
+    End If
+End Sub
+```
+
+---
+
+### 3.4 YARD FUEL ENTRY FORM (frm_YardFuelEntry)
+
+**Purpose:** Replace WhatsApp photo uploads with direct data entry
+
+**Form Design:**
+```
+┌──────────────────────────────────────────────────────────┐
+│            YARD FUEL ENTRY                                │
+│  ════════════════════════════════════════════════        │
+│                                                           │
+│  Yard: [cmb_Yard] ▼    Date: [txt_Date]                 │
+│                                                           │
+│  ┌─── TRUCKS FILLING TODAY ─────────────────────────┐   │
+│  │ Truck No: [cmb_TruckNo] ▼  Search: [txt_Search] │   │
+│  │                                                   │   │
+│  │ DO Number: [txt_DONumber] (Auto-filled)         │   │
+│  │ Destination: [txt_Destination] (Auto-filled)    │   │
+│  │                                                   │   │
+│  │ Liters Given: [txt_Liters]  [btn_AddEntry]     │   │
+│  └───────────────────────────────────────────────────┘   │
+│                                                           │
+│  ┌─── TODAY'S ENTRIES ───────────────────────────────┐   │
+│  │ [subfrm_TodayEntries - Datasheet]                │   │
+│  │ Time | Truck | DO | Liters | Entered By | [Del] │   │
+│  │                                                   │   │
+│  │ Total Liters Today: [txt_TotalToday]            │   │
+│  └───────────────────────────────────────────────────┘   │
+│                                                           │
+│  [btn_Refresh] [btn_PrintReport] [btn_Close]            │
+└──────────────────────────────────────────────────────────┘
+```
+
+**VBA Code:**
+```vba
+Option Compare Database
+Option Explicit
+
+Private Sub Form_Load()
+    Me.txt_Date = Date
+    LoadYards
+    LoadTrucks
+    LoadTodayEntries
+End Sub
+
+Private Sub LoadYards()
+    Me.cmb_Yard.RowSource = "SELECT StationID, StationName FROM tbl_Stations WHERE StationType = 'Yard' ORDER BY StationName"
+End Sub
+
+Private Sub LoadTrucks()
+    ' Load trucks that are active today
+    Me.cmb_TruckNo.RowSource = "SELECT DISTINCT TruckNo FROM tbl_FuelRecords " & _
+                                "WHERE RecordStatus = 'Active' ORDER BY TruckNo"
+End Sub
+
+Private Sub cmb_TruckNo_AfterUpdate()
+    ' Auto-fill DO and destination
+    Dim rs As DAO.Recordset
+    Set rs = CurrentDb.OpenRecordset("SELECT TOP 1 GoingDO, ReturnDO, ToLocation " & _
+                                      "FROM tbl_FuelRecords " & _
+                                      "WHERE TruckNo = '" & Me.cmb_TruckNo & "' " & _
+                                      "AND RecordStatus = 'Active' " & _
+                                      "ORDER BY RecordDate DESC")
+    If Not rs.EOF Then
+        Me.txt_DONumber = Nz(rs!GoingDO, rs!ReturnDO)
+        Me.txt_Destination = rs!ToLocation
+    End If
+    rs.Close
+    Set rs = Nothing
+End Sub
+
+Private Sub btn_AddEntry_Click()
+    ' Validate
+    If IsNull(Me.cmb_Yard) Or IsNull(Me.cmb_TruckNo) Or IsNull(Me.txt_Liters) Then
+        MsgBox "Please fill in all fields.", vbExclamation
+        Exit Sub
+    End If
+    
+    If Me.txt_Liters <= 0 Then
+        MsgBox "Liters must be greater than zero.", vbExclamation
+        Exit Sub
+    End If
+    
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim rsFuel As DAO.Recordset
+    Dim yardColumnName As String
+    
+    Set db = CurrentDb
+    
+    ' Determine which yard column to update
+    yardColumnName = GetYardColumnName(Me.cmb_Yard)
+    
+    ' Find the fuel record to update
+    Set rsFuel = db.OpenRecordset("SELECT TOP 1 * FROM tbl_FuelRecords " & _
+                                   "WHERE TruckNo = '" & Me.cmb_TruckNo & "' " & _
+                                   "AND RecordStatus = 'Active' " & _
+                                   "AND " & yardColumnName & " = 0 " & _
+                                   "ORDER BY RecordDate DESC", dbOpenDynaset)
+    
+    If Not rsFuel.EOF Then
+        rsFuel.Edit
+        rsFuel(yardColumnName) = -Me.txt_Liters ' Negative because fuel is given out
+        rsFuel!ModifiedBy = GetCurrentUser()
+        rsFuel!ModifiedDate = Now()
+        rsFuel.Update
+        
+        MsgBox "Fuel entry recorded successfully!", vbInformation
+        
+        ' Clear for next entry
+        Me.cmb_TruckNo = Null
+        Me.txt_DONumber = Null
+        Me.txt_Destination = Null
+        Me.txt_Liters = Null
+        
+        ' Refresh list
+        LoadTodayEntries
+    Else
+        MsgBox "No active fuel record found for this truck, or yard entry already exists.", vbExclamation
+    End If
+    
+    rsFuel.Close
+    Set rsFuel = Nothing
+    Set db = Nothing
+End Sub
+
+Private Function GetYardColumnName(stationID As Long) As String
+    Dim stationName As String
+    stationName = DLookup("StationName", "tbl_Stations", "StationID = " & stationID)
+    
+    Select Case UCase(stationName)
+        Case "MMSA YARD"
+            GetYardColumnName = "MMSAYard"
+        Case "TANGA YARD"
+            GetYardColumnName = "TangaYard"
+        Case "DAR YARD", "DAR ES SALAAM YARD"
+            GetYardColumnName = "DarYard"
+        Case Else
+            GetYardColumnName = "DarYard" ' Default
+    End Select
+End Function
+
+Private Sub LoadTodayEntries()
+    ' Show today's entries
+    Dim strSQL As String
+    strSQL = "SELECT RecordDate AS [Time], TruckNo, GoingDO AS DO, " & _
+             "IIF(MMSAYard<0, Abs(MMSAYard), IIF(TangaYard<0, Abs(TangaYard), Abs(DarYard))) AS Liters, " & _
+             "ModifiedBy AS [Entered By] " & _
+             "FROM tbl_FuelRecords " & _
+             "WHERE DateValue(RecordDate) = Date() " & _
+             "AND (MMSAYard <> 0 OR TangaYard <> 0 OR DarYard <> 0) " & _
+             "ORDER BY RecordDate DESC"
+    
+    Me.subfrm_TodayEntries.Form.RecordSource = strSQL
+    
+    ' Calculate total
+    Me.txt_TotalToday = Nz(DSum("Abs(MMSAYard) + Abs(TangaYard) + Abs(DarYard)", "tbl_FuelRecords", _
+                               "DateValue(RecordDate) = Date()"), 0)
+End Sub
+
+Private Sub btn_Refresh_Click()
+    LoadTodayEntries
+    LoadTrucks
+End Sub
+
+Private Sub btn_Close_Click()
+    DoCmd.Close acForm, Me.Name
+End Sub
+```
+
+---
+
+## 4. QUERIES & AUTOMATION
+
+### 4.1 SAVED QUERIES
+
+#### **qry_ActiveFuelRecords**
+```sql
+SELECT 
+    FuelRecordID,
+    RecordDate,
+    TruckNo,
+    GoingDO,
+    ReturnDO,
+    FromLocation,
+    ToLocation,
+    TotalLiters,
+    ExtraFuel,
+    Balance,
+    RecordStatus
+FROM tbl_FuelRecords
+WHERE RecordStatus = 'Active'
+ORDER BY RecordDate DESC;
+```
+
+#### **qry_MonthlyFuelSummary**
+```sql
+SELECT 
+    Format([RecordDate],"mmmm yyyy") AS Month,
+    COUNT(*) AS TotalRecords,
+    SUM(TotalLiters) AS TotalLitersAllocated,
+    SUM(ExtraFuel) AS TotalExtra,
+    SUM(Abs([DarGoing] + [MoroGoing] + [MbeyaGoing] + [TdmGoing] + [ZambiaGoing] + 
+        [CongoFuel] + [ZambiaReturn] + [TundumaReturn] + [MbeyaReturn] + 
+        [MoroReturn] + [DarReturn] + [TangaReturn])) AS TotalLitersUsed
+FROM tbl_FuelRecords
+GROUP BY Format([RecordDate],"mmmm yyyy"), Year([RecordDate]), Month([RecordDate])
+ORDER BY Year([RecordDate]) DESC, Month([RecordDate]) DESC;
+```
+
+#### **qry_LPOSummaryByMonth**
+```sql
+SELECT 
+    MonthName,
+    Year,
+    COUNT(*) AS TotalEntries,
+    SUM(Liters) AS TotalLiters,
+    SUM(TotalAmount) AS TotalAmount,
+    StationName
+FROM tbl_LPOSummary
+WHERE Status = 'Active'
+GROUP BY MonthName, Year, Month, StationName
+ORDER BY Year DESC, Month DESC;
+```
+
+#### **qry_TruckFuelHistory**
+```sql
+PARAMETERS [Enter Truck Number] Text;
+SELECT 
+    RecordDate,
+    TruckNo,
+    GoingDO,
+    ReturnDO,
+    ToLocation,
+    TotalLiters,
+    ExtraFuel,
+    (TotalLiters + ExtraFuel) AS TotalAllocated,
+    Balance,
+    (TotalLiters + ExtraFuel - Balance) AS TotalUsed
+FROM tbl_FuelRecords
+WHERE TruckNo = [Enter Truck Number]
+ORDER BY RecordDate DESC;
+```
+
+#### **qry_StationFuelOrders**
+```sql
+PARAMETERS [Select Station] Long;
+SELECT 
+    l.LPONumber,
+    l.LPODate,
+    l.StationName,
+    d.DONumber,
+    d.TruckNo,
+    d.Liters,
+    d.RatePerLiter,
+    d.Amount,
+    d.Destination,
+    l.LPOStatus
+FROM tbl_LPO l INNER JOIN tbl_LPODetails d ON l.LPOID = d.LPOID
+WHERE l.StationID = [Select Station] 
+    AND l.LPOStatus <> 'Cancelled'
+ORDER BY l.LPODate DESC, l.LPONumber;
+```
+
+---
+
+## 5. REPORTS & DOCUMENT GENERATION
+
+### 5.1 LPO REPORT (rpt_LPO)
+
+**Report Design:**
+```
+┌──────────────────────────────────────────────────────┐
+│ Report Header:                                        │
+│ ═══════════════════════════════════════════════════  │
+│ TAHMEED TRANSPORTERS                                 │
+│                                                       │
+│ Page Header:                                         │
+│ LPO No: [LPONumber]           Date: [LPODate]       │
+│ Station: [StationName]        Order For: [OrderFor] │
+│                                                       │
+│ KINDLY SUPPLY THE FOLLOWING LITERS                   │
+│                                                       │
+│ Detail Section (from tbl_LPODetails):                │
+│ ───────────────────────────────────────────────────  │
+│ Do No. | Truck No. | Liters | Rate | Amount | Dest. │
+│ [DONumber] | [TruckNo] | [Liters] | [RatePerLiter]  │
+│          | [Amount] | [Destination]                  │
+│                                                       │
+│ Report Footer:                                       │
+│                     TOTAL: [=Sum(Amount)]            │
+│                                                       │
+│ Prepared By: [CreatedBy]     Date: [CreatedDate]    │
+│ Signature: _______________                           │
+└──────────────────────────────────────────────────────┘
+```
+
+**Record Source:**
+```sql
+SELECT l.*, d.*
+FROM tbl_LPO l INNER JOIN tbl_LPODetails d ON l.LPOID = d.LPOID
+WHERE l.LPONumber = [Forms]![frm_LPO_Create]![txt_LPONumber]
+ORDER BY d.TruckNo;
+```
+
+---
+
+### 5.2 FUEL RECORD REPORT (rpt_FuelRecords)
+
+**Report Type:** Tabular Report
+**Record Source:** tbl_FuelRecords with date range parameter
+
+**Layout:** Mimics Excel fuel record sheet with all columns
+
+---
+
+### 5.3 LPO SUMMARY REPORT (rpt_LPOSummary)
+
+**Report Design:**
+```
+TAHMEED TRANSPORTERS - LPO SUMMARY
+Month: [MonthName] [Year]
+
+S/No. | Date | LPO No | Station | DO/SDO | Truck No | Ltrs | Price/Ltr | Destination
+────────────────────────────────────────────────────────────────────────────────────
+[SerialNo] | [SummaryDate] | [LPONumber] | [StationName] | [DONumber] | 
+[TruckNo] | [Liters] | [PricePerLiter] | [Destination]
+
+                                                        TOTAL: [Sum of TotalAmount]
+```
+
+---
+
+## 6. VBA CODE MODULES
+
+### 6.1 STANDARD MODULE (mod_CommonFunctions)
+
+```vba
+Option Compare Database
+Option Explicit
+
+' =====================================================
+' COMMON UTILITY FUNCTIONS
+' =====================================================
+
+Public Function GetCurrentUser() As String
+    ' In production, integrate with login system
+    ' For now, return Windows username
+    GetCurrentUser = Environ("USERNAME")
+End Function
+
+Public Function GetCurrentUserRole() As String
+    ' Get user role from tbl_Users
+    Dim rs As DAO.Recordset
+    Set rs = CurrentDb.OpenRecordset("SELECT UserRole FROM tbl_Users WHERE Username = '" & GetCurrentUser() & "'")
+    If Not rs.EOF Then
+        GetCurrentUserRole = rs!UserRole
+    Else
+        GetCurrentUserRole = "Guest"
+    End If
+    rs.Close
+    Set rs = Nothing
+End Function
+
+Public Function ValidateUser(username As String, password As String) As Boolean
+    ' Simple password validation
+    ' In production, use proper encryption
+    Dim rs As DAO.Recordset
+    Set rs = CurrentDb.OpenRecordset("SELECT UserID FROM tbl_Users WHERE Username = '" & username & "' AND Password = '" & EncodePassword(password) & "' AND IsActive = True")
+    
+    If Not rs.EOF Then
+        ValidateUser = True
+        ' Update last login
+        CurrentDb.Execute "UPDATE tbl_Users SET LastLogin = Now() WHERE Username = '" & username & "'"
+    Else
+        ValidateUser = False
+    End If
+    rs.Close
+    Set rs = Nothing
+End Function
+
+Public Function EncodePassword(pwd As String) As String
+    ' Simple encoding - in production use proper hashing
+    Dim i As Integer
+    Dim encoded As String
+    For i = 1 To Len(pwd)
+        encoded = encoded & Chr(Asc(Mid(pwd, i, 1)) + 5)
+    Next i
+    EncodePassword = encoded
+End Function
+
+Public Function GetTruckExtra(truckNo As String) As Integer
+    ' Get extra fuel for truck based on batch
+    Dim rs As DAO.Recordset
+    Set rs = CurrentDb.OpenRecordset("SELECT ExtraFuel FROM tbl_Trucks WHERE TruckNo = '" & truckNo & "'")
+    If Not rs.EOF Then
+        GetTruckExtra = rs!ExtraFuel
+    Else
+        GetTruckExtra = 60 ' Default
+    End If
+    rs.Close
+    Set rs = Nothing
+End Function
+
+Public Function CalculateFuelBalance(fuelRecordID As Long) As Long
+    ' Calculate remaining balance for a fuel record
+    Dim rs As DAO.Recordset
+    Set rs = CurrentDb.OpenRecordset("SELECT * FROM tbl_FuelRecords WHERE FuelRecordID = " & fuelRecordID)
+    
+    If Not rs.EOF Then
+        Dim balance As Long
+        balance = Nz(rs!TotalLiters, 0) + Nz(rs!ExtraFuel, 0)
+        balance = balance + Nz(rs!MMSAYard, 0) + Nz(rs!TangaYard, 0) + Nz(rs!DarYard, 0)
+        balance = balance + Nz(rs!DarGoing, 0) + Nz(rs!MoroGoing, 0) + Nz(rs!MbeyaGoing, 0)
+        balance = balance + Nz(rs!TdmGoing, 0) + Nz(rs!ZambiaGoing, 0) + Nz(rs!CongoFuel, 0)
+        balance = balance + Nz(rs!ZambiaReturn, 0) + Nz(rs!TundumaReturn, 0)
+        balance = balance + Nz(rs!MbeyaReturn, 0) + Nz(rs!MoroReturn, 0)
+        balance = balance + Nz(rs!DarReturn, 0) + Nz(rs!TangaReturn, 0)
+        
+        CalculateFuelBalance = balance
+    Else
+        CalculateFuelBalance = 0
+    End If
+    
+    rs.Close
+    Set rs = Nothing
+End Function
+
+Public Sub ExportToExcel(tableName As String, Optional fileName As String)
+    ' Export table/query to Excel
+    If fileName = "" Then
+        fileName = CurrentProject.Path & "\" & tableName & "_" & Format(Now, "yyyymmdd_hhnnss") & ".xlsx"
+    End If
+    
+    DoCmd.TransferSpreadsheet acExport, acSpreadsheetTypeExcel12Xml, tableName, fileName, True
+    
+    MsgBox "Data exported successfully to:" & vbCrLf & fileName, vbInformation
+End Sub
+
+Public Sub BackupDatabase()
+    ' Create backup copy
+    Dim sourcePath As String
+    Dim backupPath As String
+    
+    sourcePath = CurrentProject.FullName
+    backupPath = CurrentProject.Path & "\Backups\TahmeedFuelDB_Backup_" & Format(Now, "yyyymmdd_hhnnss") & ".accdb"
+    
+    ' Create Backups folder if doesn't exist
+    If Dir(CurrentProject.Path & "\Backups", vbDirectory) = "" Then
+        MkDir CurrentProject.Path & "\Backups"
+    End If
+    
+    FileCopy sourcePath, backupPath
+    
+    MsgBox "Database backed up successfully to:" & vbCrLf & backupPath, vbInformation
+End Sub
+```
+
+---
+
+## 7. USER INTERFACE NAVIGATION
+
+### 7.1 STARTUP SETTINGS
+
+**File → Options → Current Database:**
+- Application Title: "Tahmeed Fuel Management System"
+- Display Form: frm_Login
+- Uncheck "Display Navigation Pane"
+- Uncheck "Allow Full Menus"
+- Uncheck "Allow Default Shortcut Menus"
+
+### 7.2 LOGIN FORM (frm_Login)
+
+```vba
+Option Compare Database
+Option Explicit
+
+Private Sub btn_Login_Click()
+    If ValidateUser(Me.txt_Username, Me.txt_Password) Then
+        ' Set global user variable
+        TempVars.Add "CurrentUser", Me.txt_Username
+        TempVars.Add "UserRole", GetCurrentUserRole()
+        
+        ' Close login and open main menu
+        DoCmd.Close acForm, Me.Name
+        DoCmd.OpenForm "frm_MainMenu"
+    Else
+        MsgBox "Invalid username or password.", vbExclamation
+        Me.txt_Password = ""
+        Me.txt_Username.SetFocus
+    End If
+End Sub
+
+Private Sub btn_Exit_Click()
+    Application.Quit
+End Sub
+```
+
+---
+
+## 8. IMPLEMENTATION STEPS
+
+### Step 1: Create New Database
+1. Open Microsoft Access
+2. Create Blank Database: "TahmeedFuelManagement.accdb"
+3. Save in appropriate location
+
+### Step 2: Create Tables
+1. Create all Master Data tables first
+2. Set Primary Keys and data types
+3. Create Transaction tables
+4. Set up relationships with Referential Integrity
+
+### Step 3: Populate Master Data
+1. Enter truck data with batches
+2. Enter station data with rates
+3. Enter route data with total liters
+4. Create user accounts
+
+### Step 4: Create Forms
+1. Build Main Menu (frm_MainMenu)
+2. Build Fuel Records form with all controls
+3. Build LPO Creation form with subform
+4. Build Yard Entry form
+5. Test navigation between forms
+
+### Step 5: Create Queries
+1. Create all saved queries
+2. Test parameter queries
+3. Create update queries for automation
+
+### Step 6: Create Reports
+1. Design LPO report matching current format
+2. Design Fuel Record report
+3. Design LPO Summary report
+4. Test printing and PDF generation
+
+### Step 7: Add VBA Code
+1. Create mod_CommonFunctions module
+2. Add form-specific code to each form
+3. Add error handling to all procedures
+4. Test all automation features
+
+### Step 8: Testing & Validation
+1. Test fuel record creation and balance calculations
+2. Test LPO creation and automatic updates
+3. Test yard entry functionality
+4. Verify all reports generate correctly
+5. Test data integrity with sample data
+6. Perform user acceptance testing
+
+### Step 9: Data Migration (If migrating from Excel)
+1. Export Excel data to CSV format
+2. Import using Access import wizard
+3. Map columns to appropriate tables
+4. Validate imported data
+5. Run balance recalculation queries
+
+### Step 10: Deployment
+1. Create user documentation
+2. Train users on the new system
+3. Set up backup procedures
+4. Deploy to production environment
+5. Monitor for issues in first week
+
+---
+
+## 9. ADVANCED FEATURES & ENHANCEMENTS
+
+### 9.1 AUTOMATED CHECKPOINT FUEL CALCULATION
+
+**Create Module: mod_FuelCalculations**
+
+```vba
+Option Compare Database
+Option Explicit
+
+Public Sub CalculateCheckpointFuel(fuelRecordID As Long)
+    ' Automatically calculate fuel for each checkpoint based on route
+    Dim rs As DAO.Recordset
+    Dim totalLiters As Long
+    Dim extraFuel As Long
+    Dim startLocation As String
+    Dim destination As String
+    
+    Set rs = CurrentDb.OpenRecordset("SELECT * FROM tbl_FuelRecords WHERE FuelRecordID = " & fuelRecordID, dbOpenDynaset)
+    
+    If Not rs.EOF Then
+        totalLiters = Nz(rs!TotalLiters, 0)
+        extraFuel = Nz(rs!ExtraFuel, 0)
+        startLocation = Nz(rs!StartLocation, "")
+        destination = Nz(rs!ToLocation, "")
+        
+        rs.Edit
+        
+        ' GOING PHASE CALCULATIONS
+        ' If starting from Tanga
+        If UCase(startLocation) = "TANGA" Then
+            rs!TangaYard = -100 ' Give 100L to reach Dar
+        End If
+        
+        ' Dar Yard or Going
+        If Nz(rs!DarYard, 0) = 0 And Nz(rs!DarGoing, 0) = 0 Then
+            ' Check if loaded at Kisarawe
+            If InStr(UCase(Nz(rs!FromLocation, "")), "KISARAWE") > 0 Then
+                rs!DarYard = -580
+            Else
+                rs!DarYard = -550
+            End If
+        End If
+        
+        ' Mbeya Going
+        Dim darFuel As Long
+        darFuel = Abs(Nz(rs!DarYard, 0) + Nz(rs!DarGoing, 0))
+        If darFuel >= 550 Then
+            rs!MbeyaGoing = -450
+        Else
+            ' If got fuel along the way, give remaining + 450
+            rs!MbeyaGoing = -(550 - darFuel + 450)
+        End If
+        
+        ' Zambia Going
+        Dim zambiaFuel As Long
+        zambiaFuel = (totalLiters + extraFuel) - 900
+        
+        ' Special destinations
+        If InStr(UCase(destination), "LUSAKA") > 0 Then
+            rs!ZambiaGoing = -60
+        ElseIf InStr(UCase(destination), "LUBUMBASHI") > 0 Then
+            rs!ZambiaGoing = -260
+        Else
+            rs!ZambiaGoing = -zambiaFuel
+        End If
+        
+        ' RETURN PHASE CALCULATIONS
+        ' Zambia Return - split between two stations
+        rs!ZambiaReturn = -400
+        ' Note: In LPO creation, split this as 50L Lake Ndola + 350L Lake Kapiri
+        
+        ' Tunduma Return
+        rs!TundumaReturn = -100
+        
+        ' Mbeya Return
+        rs!MbeyaReturn = -400
+        
+        ' Moro Return (only for Mombasa destination)
+        If InStr(UCase(destination), "MOMBASA") > 0 Then
+            rs!MoroReturn = -100
+            rs!TangaReturn = -70
+        End If
+        
+        rs!ModifiedBy = GetCurrentUser()
+        rs!ModifiedDate = Now()
+        rs.Update
+    End If
+    
+    rs.Close
+    Set rs = Nothing
+End Sub
+
+Public Function GetRecommendedLitersForCheckpoint(fuelRecordID As Long, checkpointColumn As String) As Long
+    ' Get recommended liters for a specific checkpoint
+    Dim rs As DAO.Recordset
+    Set rs = CurrentDb.OpenRecordset("SELECT * FROM tbl_FuelRecords WHERE FuelRecordID = " & fuelRecordID)
+    
+    If Not rs.EOF Then
+        Select Case checkpointColumn
+            Case "DarGoing"
+                GetRecommendedLitersForCheckpoint = 550 - Abs(Nz(rs!DarYard, 0))
+            Case "MbeyaGoing"
+                GetRecommendedLitersForCheckpoint = 450
+            Case "ZambiaGoing"
+                GetRecommendedLitersForCheckpoint = (Nz(rs!TotalLiters, 0) + Nz(rs!ExtraFuel, 0)) - 900
+            Case "ZambiaReturn"
+                GetRecommendedLitersForCheckpoint = 400
+            Case "TundumaReturn"
+                GetRecommendedLitersForCheckpoint = 100
+            Case "MbeyaReturn"
+                GetRecommendedLitersForCheckpoint = 400
+            Case "MoroReturn"
+                GetRecommendedLitersForCheckpoint = 100
+            Case "TangaReturn"
+                GetRecommendedLitersForCheckpoint = 70
+            Case Else
+                GetRecommendedLitersForCheckpoint = 0
+        End Select
+    End If
+    
+    rs.Close
+    Set rs = Nothing
+End Function
+```
+
+---
+
+### 9.2 LPO CANCELLATION & MODIFICATION
+
+**Form: frm_LPO_Manage**
+
+```vba
+Option Compare Database
+Option Explicit
+
+Private Sub btn_CancelLPO_Click()
+    If MsgBox("Are you sure you want to cancel this LPO? This will reverse fuel record updates.", _
+              vbQuestion + vbYesNo) = vbNo Then
+        Exit Sub
+    End If
+    
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim rsDetail As DAO.Recordset
+    Dim rsFuel As DAO.Recordset
+    
+    Set db = CurrentDb
+    db.BeginTrans
+    
+    On Error GoTo Err_Handler
+    
+    ' Get LPO details to reverse fuel records
+    Set rsDetail = db.OpenRecordset("SELECT * FROM tbl_LPODetails WHERE LPOID = " & Me.LPOID)
+    
+    While Not rsDetail.EOF
+        ' Reverse fuel record update
+        Set rsFuel = db.OpenRecordset("SELECT * FROM tbl_FuelRecords WHERE FuelRecordID = " & rsDetail!FuelRecordID, dbOpenDynaset)
+        If Not rsFuel.EOF Then
+            rsFuel.Edit
+            rsFuel(rsDetail!CheckpointColumn) = 0 ' Reset to zero
+            rsFuel!ModifiedBy = GetCurrentUser()
+            rsFuel!ModifiedDate = Now()
+            rsFuel.Update
+        End If
+        rsFuel.Close
+        rsDetail.MoveNext
+    Wend
+    rsDetail.Close
+    
+    ' Update LPO status
+    Set rs = db.OpenRecordset("SELECT * FROM tbl_LPO WHERE LPOID = " & Me.LPOID, dbOpenDynaset)
+    If Not rs.EOF Then
+        rs.Edit
+        rs!LPOStatus = "Cancelled"
+        rs!ModifiedBy = GetCurrentUser()
+        rs!ModifiedDate = Now()
+        rs.Update
+    End If
+    rs.Close
+    
+    ' Cancel LPO summary entries
+    db.Execute "UPDATE tbl_LPOSummary SET Status = 'Cancelled' WHERE LPONumber = '" & Me.LPONumber & "'"
+    
+    db.CommitTrans
+    
+    MsgBox "LPO cancelled successfully!", vbInformation
+    Me.Requery
+    Exit Sub
+    
+Err_Handler:
+    db.Rollback
+    MsgBox "Error cancelling LPO: " & Err.Description, vbCritical
+End Sub
+
+Private Sub btn_ModifyLPO_Click()
+    ' Allow modification of LPO amounts
+    If Me.LPOStatus <> "Draft" Then
+        MsgBox "Only draft LPOs can be modified. Cancel and recreate if needed.", vbExclamation
+        Exit Sub
+    End If
+    
+    DoCmd.OpenForm "frm_LPO_Create", , , "LPONumber = '" & Me.LPONumber & "'", acFormEdit
+End Sub
+```
+
+---
+
+### 9.3 AUTOMATED REPORTS GENERATION
+
+**Module: mod_ReportAutomation**
+
+```vba
+Option Compare Database
+Option Explicit
+
+Public Sub GenerateMonthlyReports(reportMonth As Integer, reportYear As Integer)
+    ' Generate all monthly reports automatically
+    Dim reportPath As String
+    reportPath = CurrentProject.Path & "\Reports\" & reportYear & "_" & Format(reportMonth, "00") & "\"
+    
+    ' Create folder if doesn't exist
+    If Dir(reportPath, vbDirectory) = "" Then
+        MkDir CurrentProject.Path & "\Reports\"
+        MkDir reportPath
+    End If
+    
+    ' 1. Fuel Records Report
+    DoCmd.OpenReport "rpt_FuelRecords", acViewPreview, , _
+                     "Month([RecordDate]) = " & reportMonth & " AND Year([RecordDate]) = " & reportYear
+    DoCmd.OutputTo acOutputReport, "rpt_FuelRecords", acFormatPDF, _
+                    reportPath & "FuelRecords_" & Format(reportMonth, "00") & "_" & reportYear & ".pdf"
+    DoCmd.Close acReport, "rpt_FuelRecords"
+    
+    ' 2. LPO Summary Report
+    DoCmd.OpenReport "rpt_LPOSummary", acViewPreview, , _
+                     "Month = " & reportMonth & " AND Year = " & reportYear
+    DoCmd.OutputTo acOutputReport, "rpt_LPOSummary", acFormatPDF, _
+                    reportPath & "LPOSummary_" & Format(reportMonth, "00") & "_" & reportYear & ".pdf"
+    DoCmd.Close acReport, "rpt_LPOSummary"
+    
+    ' 3. Excel Exports
+    ExportMonthlyDataToExcel reportMonth, reportYear, reportPath
+    
+    MsgBox "Monthly reports generated successfully in:" & vbCrLf & reportPath, vbInformation
+End Sub
+
+Private Sub ExportMonthlyDataToExcel(monthNum As Integer, yearNum As Integer, savePath As String)
+    ' Export fuel records to Excel
+    Dim qryName As String
+    qryName = "qry_MonthlyExport_Temp"
+    
+    ' Create temporary query
+    CurrentDb.QueryDefs.Delete qryName
+    Dim qdf As DAO.QueryDef
+    Set qdf = CurrentDb.CreateQueryDef(qryName)
+    qdf.SQL = "SELECT * FROM tbl_FuelRecords WHERE Month([RecordDate]) = " & monthNum & _
+              " AND Year([RecordDate]) = " & yearNum & " ORDER BY RecordDate"
+    qdf.Close
+    
+    ' Export to Excel
+    DoCmd.TransferSpreadsheet acExport, acSpreadsheetTypeExcel12Xml, _
+                             qryName, savePath & "FuelRecords_" & Format(monthNum, "00") & "_" & yearNum & ".xlsx", True
+    
+    ' Export LPO Summary
+    qdf.SQL = "SELECT * FROM tbl_LPOSummary WHERE Month = " & monthNum & _
+              " AND Year = " & yearNum & " ORDER BY SerialNo"
+    
+    DoCmd.TransferSpreadsheet acExport, acSpreadsheetTypeExcel12Xml, _
+                             qryName, savePath & "LPOSummary_" & Format(monthNum, "00") & "_" & yearNum & ".xlsx", True
+    
+    ' Clean up
+    CurrentDb.QueryDefs.Delete qryName
+End Sub
+
+Public Sub EmailLPOToStation(lpoNumber As String, stationEmail As String)
+    ' Send LPO via email (requires Outlook)
+    On Error GoTo Err_Handler
+    
+    Dim outlookApp As Object
+    Dim outlookMail As Object
+    Dim pdfPath As String
+    
+    ' Generate PDF
+    pdfPath = CurrentProject.Path & "\Temp\LPO_" & lpoNumber & ".pdf"
+    
+    DoCmd.OpenReport "rpt_LPO", acViewPreview, , "LPONumber = '" & lpoNumber & "'"
+    DoCmd.OutputTo acOutputReport, "rpt_LPO", acFormatPDF, pdfPath
+    DoCmd.Close acReport, "rpt_LPO"
+    
+    ' Create email
+    Set outlookApp = CreateObject("Outlook.Application")
+    Set outlookMail = outlookApp.CreateItem(0)
+    
+    With outlookMail
+        .To = stationEmail
+        .Subject = "Fuel Order - LPO #" & lpoNumber
+        .Body = "Dear Station Manager," & vbCrLf & vbCrLf & _
+                "Please find attached the fuel order (LPO #" & lpoNumber & ") for today." & vbCrLf & vbCrLf & _
+                "Kindly supply the fuel as indicated in the attached document." & vbCrLf & vbCrLf & _
+                "Best regards," & vbCrLf & _
+                "TAHMEED TRANSPORTERS"
+        .Attachments.Add pdfPath
+        .Display ' or .Send to send automatically
+    End With
+    
+    ' Update LPO
+    CurrentDb.Execute "UPDATE tbl_LPO SET SentDate = Now(), SentVia = 'Email' WHERE LPONumber = '" & lpoNumber & "'"
+    
+    MsgBox "LPO email prepared successfully!", vbInformation
+    Exit Sub
+    
+Err_Handler:
+    MsgBox "Error sending email: " & Err.Description, vbCritical
+End Sub
+```
+
+---
+
+### 9.4 DASHBOARD & ANALYTICS
+
+**Form: frm_Dashboard**
+
+```vba
+Option Compare Database
+Option Explicit
+
+Private Sub Form_Load()
+    LoadDashboardData
+End Sub
+
+Private Sub LoadDashboardData()
+    ' Today's Statistics
+    Me.txt_TodayRecords = DCount("*", "tbl_FuelRecords", "DateValue([RecordDate]) = Date()")
+    Me.txt_TodayLPOs = DCount("*", "tbl_LPO", "DateValue([LPODate]) = Date()")
+    
+    ' This Month Statistics
+    Me.txt_MonthRecords = DCount("*", "tbl_FuelRecords", _
+                                  "Month([RecordDate]) = Month(Date()) AND Year([RecordDate]) = Year(Date())")
+    Me.txt_MonthLiters = Nz(DSum("TotalLiters", "tbl_FuelRecords", _
+                                 "Month([RecordDate]) = Month(Date()) AND Year([RecordDate]) = Year(Date())"), 0)
+    Me.txt_MonthAmount = Nz(DSum("TotalAmount", "tbl_LPOSummary", _
+                                 "Month = Month(Date()) AND Year = Year(Date())"), 0)
+    
+    ' Active Trucks
+    Me.txt_ActiveTrucks = DCount("DISTINCT TruckNo", "tbl_FuelRecords", _
+                                 "RecordStatus = 'Active' AND DateValue([RecordDate]) >= Date()-7")
+    
+    ' Pending LPOs
+    Me.txt_PendingLPOs = DCount("*", "tbl_LPO", "LPOStatus = 'Draft'")
+    
+    ' Top 5 Routes This Month
+    LoadTopRoutes
+    
+    ' Fuel Usage Trend (Last 6 Months)
+    LoadFuelTrend
+End Sub
+
+Private Sub LoadTopRoutes()
+    Dim rs As DAO.Recordset
+    Dim strSQL As String
+    
+    strSQL = "SELECT TOP 5 ToLocation, COUNT(*) AS TripCount, SUM(TotalLiters) AS TotalLiters " & _
+             "FROM tbl_FuelRecords " & _
+             "WHERE Month([RecordDate]) = Month(Date()) AND Year([RecordDate]) = Year(Date()) " & _
+             "GROUP BY ToLocation " & _
+             "ORDER BY COUNT(*) DESC"
+    
+    Set rs = CurrentDb.OpenRecordset(strSQL)
+    
+    Dim i As Integer
+    i = 1
+    While Not rs.EOF And i <= 5
+        Me("txt_Route" & i) = rs!ToLocation
+        Me("txt_RouteCount" & i) = rs!TripCount
+        Me("txt_RouteLiters" & i) = Format(rs!TotalLiters, "#,##0") & " L"
+        rs.MoveNext
+        i = i + 1
+    Wend
+    
+    rs.Close
+    Set rs = Nothing
+End Sub
+
+Private Sub LoadFuelTrend()
+    ' Load data for chart showing last 6 months fuel usage
+    Dim rs As DAO.Recordset
+    Dim strSQL As String
+    
+    strSQL = "SELECT Format([RecordDate],'yyyy-mm') AS MonthYear, " & _
+             "SUM(TotalLiters + ExtraFuel) AS TotalFuel " & _
+             "FROM tbl_FuelRecords " & _
+             "WHERE RecordDate >= DateAdd('m', -6, Date()) " & _
+             "GROUP BY Format([RecordDate],'yyyy-mm') " & _
+             "ORDER BY Format([RecordDate],'yyyy-mm')"
+    
+    ' Bind to chart control if available
+    ' Me.cht_FuelTrend.RowSource = strSQL
+End Sub
+
+Private Sub btn_RefreshDashboard_Click()
+    LoadDashboardData
+End Sub
+```
+
+---
+
+### 9.5 DATA VALIDATION & INTEGRITY CHECKS
+
+**Module: mod_DataValidation**
+
+```vba
+Option Compare Database
+Option Explicit
+
+Public Sub ValidateDataIntegrity()
+    ' Run comprehensive data validation
+    Dim errorCount As Integer
+    Dim errorLog As String
+    
+    errorLog = "DATA INTEGRITY CHECK - " & Format(Now, "yyyy-mm-dd hh:nn:ss") & vbCrLf & String(60, "=") & vbCrLf & vbCrLf
+    
+    ' 1. Check for orphaned LPO details
+    Dim rs As DAO.Recordset
+    Set rs = CurrentDb.OpenRecordset("SELECT * FROM tbl_LPODetails WHERE LPOID NOT IN (SELECT LPOID FROM tbl_LPO)")
+    If Not rs.EOF Then
+        errorCount = rs.RecordCount
+        errorLog = errorLog & "ERROR: " & errorCount & " orphaned LPO detail records found." & vbCrLf
+    End If
+    rs.Close
+    
+    ' 2. Check for fuel records with invalid balances
+    Set rs = CurrentDb.OpenRecordset("SELECT FuelRecordID, TruckNo, Balance FROM tbl_FuelRecords WHERE Balance < 0")
+    If Not rs.EOF Then
+        errorCount = errorCount + rs.RecordCount
+        errorLog = errorLog & "WARNING: " & rs.RecordCount & " fuel records with negative balance." & vbCrLf
+        While Not rs.EOF
+            errorLog = errorLog & "  - Record ID: " & rs!FuelRecordID & ", Truck: " & rs!TruckNo & ", Balance: " & rs!Balance & vbCrLf
+            rs.MoveNext
+        Wend
+    End If
+    rs.Close
+    
+    ' 3. Check for LPO summary mismatches
+    Set rs = CurrentDb.OpenRecordset( _
+        "SELECT l.LPONumber FROM tbl_LPO l " & _
+        "LEFT JOIN tbl_LPOSummary s ON l.LPONumber = s.LPONumber " & _
+        "WHERE l.LPOStatus <> 'Draft' AND s.LPONumber IS NULL")
+    If Not rs.EOF Then
+        errorCount = errorCount + rs.RecordCount
+        errorLog = errorLog & "ERROR: " & rs.RecordCount & " LPOs missing summary entries." & vbCrLf
+    End If
+    rs.Close
+    
+    ' 4. Check for duplicate truck numbers
+    Set rs = CurrentDb.OpenRecordset( _
+        "SELECT TruckNo, COUNT(*) AS DupCount FROM tbl_Trucks " & _
+        "GROUP BY TruckNo HAVING COUNT(*) > 1")
+    If Not rs.EOF Then
+        errorCount = errorCount + rs.RecordCount
+        errorLog = errorLog & "ERROR: " & rs.RecordCount & " duplicate truck numbers found." & vbCrLf
+    End If
+    rs.Close
+    
+    ' 5. Check for missing truck extra fuel
+    Set rs = CurrentDb.OpenRecordset("SELECT TruckNo FROM tbl_FuelRecords WHERE ExtraFuel = 0 OR ExtraFuel IS NULL")
+    If Not rs.EOF Then
+        errorLog = errorLog & "WARNING: " & rs.RecordCount & " fuel records with no extra fuel assigned." & vbCrLf
+    End If
+    rs.Close
+    
+    ' Summary
+    errorLog = errorLog & vbCrLf & String(60, "=") & vbCrLf
+    If errorCount = 0 Then
+        errorLog = errorLog & "RESULT: All integrity checks passed! ✓" & vbCrLf
+    Else
+        errorLog = errorLog & "RESULT: " & errorCount & " issues found. Please review above." & vbCrLf
+    End If
+    
+    ' Display or save log
+    MsgBox errorLog, IIf(errorCount = 0, vbInformation, vbExclamation), "Data Integrity Check"
+    
+    ' Save to file
+    Dim fileNum As Integer
+    fileNum = FreeFile
+    Open CurrentProject.Path & "\IntegrityCheck_" & Format(Now, "yyyymmdd_hhnnss") & ".txt" For Output As fileNum
+    Print #fileNum, errorLog
+    Close fileNum
+End Sub
+
+Public Sub RecalculateAllBalances()
+    ' Recalculate balance for all fuel records
+    If MsgBox("This will recalculate balances for all fuel records. Continue?", vbQuestion + vbYesNo) = vbNo Then
+        Exit Sub
+    End If
+    
+    Dim rs As DAO.Recordset
+    Dim recordCount As Integer
+    
+    Set rs = CurrentDb.OpenRecordset("SELECT FuelRecordID FROM tbl_FuelRecords", dbOpenDynaset)
+    
+    While Not rs.EOF
+        Dim newBalance As Long
+        newBalance = CalculateFuelBalance(rs!FuelRecordID)
+        
+        CurrentDb.Execute "UPDATE tbl_FuelRecords SET Balance = " & newBalance & _
+                         " WHERE FuelRecordID = " & rs!FuelRecordID
+        
+        recordCount = recordCount + 1
+        rs.MoveNext
+    Wend
+    
+    rs.Close
+    Set rs = Nothing
+    
+    MsgBox recordCount & " fuel records updated successfully!", vbInformation
+End Sub
+```
+
+---
+
+## 10. SECURITY & ACCESS CONTROL
+
+### 10.1 Role-Based Access
+
+**Table: tbl_FormPermissions**
+```
+FormName          AdminAccess    OrderMaker    YardAttendant    Viewer
+────────────────────────────────────────────────────────────────────────
+frm_FuelRecords      Full          Full          ReadOnly         ReadOnly
+frm_LPO_Create       Full          Full          None             None
+frm_YardEntry        Full          ReadOnly      Full             None
+frm_Settings         Full          None          None             None
+frm_Reports          Full          Full          Full             Full
+```
+
+**Module: mod_Security**
+
+```vba
+Option Compare Database
+Option Explicit
+
+Public Function HasFormAccess(formName As String) As String
+    ' Returns: "Full", "ReadOnly", or "None"
+    Dim userRole As String
+    userRole = TempVars("UserRole")
+    
+    Dim rs As DAO.Recordset
+    Set rs = CurrentDb.OpenRecordset("SELECT " & userRole & " FROM tbl_FormPermissions WHERE FormName = '" & formName & "'")
+    
+    If Not rs.EOF Then
+        HasFormAccess = Nz(rs(userRole), "None")
+    Else
+        HasFormAccess = "None"
+    End If
+    
+    rs.Close
+    Set rs = Nothing
+End Function
+
+Public Sub EnforceFormPermissions(frm As Form)
+    ' Apply permissions to form
+    Dim access As String
+    access = HasFormAccess(frm.Name)
+    
+    Select Case access
+        Case "None"
+            MsgBox "You do not have permission to access this form.", vbExclamation
+            DoCmd.Close acForm, frm.Name
+        Case "ReadOnly"
+            frm.AllowAdditions = False
+            frm.AllowDeletions = False
+            frm.AllowEdits = False
+        Case "Full"
+            ' No restrictions
+    End Select
+End Sub
+```
+
+---
+
+## 11. MAINTENANCE & TROUBLESHOOTING
+
+### 11.1 Common Issues & Solutions
+
+**Issue 1: Slow Performance**
+- **Solution**: Compact & Repair database regularly
+- **Code**:
+```vba
+Public Sub CompactAndRepair()
+    Dim dbPath As String
+    dbPath = CurrentProject.FullName
+    Application.SetOption "Auto Compact", True
+    MsgBox "Database will compact on close.", vbInformation
+End Sub
+```
+
+**Issue 2: Form Not Loading**
+- Check record source query
+- Verify all referenced fields exist
+- Check for circular references in calculated controls
+
+**Issue 3: Balance Calculation Incorrect**
+- Run `RecalculateAllBalances()` procedure
+- Check for NULL values in fuel columns
+- Verify negative signs on fuel given out
+
+**Issue 4: LPO Not Updating Fuel Record**
+- Check relationship integrity
+- Verify CheckpointColumn field has valid value
+- Run data integrity check
+
+---
+
+## 12. USER TRAINING GUIDE
+
+### 12.1 Quick Start for Fuel Order Makers
+
+**Daily Workflow:**
+
+1. **Morning**: Check yard entries
+   - Open Yard Entry form
+   - Verify yesterday's entries
+   - Prepare for today's trucks
+
+2. **Create Fuel Records**: When trucks are booked
+   - Open Fuel Records form
+   - Click "New Record"
+   - Select truck and route
+   - System auto-fills totals
+   - Save record
+
+3. **Create LPOs**: Throughout the day
+   - From Fuel Records, click "Create LPO"
+   - Select station and checkpoint
+   - Add trucks to LPO
+   - Review and save
+   - Print/email to station
+
+4. **End of Day**: Generate reports
+   - Open Reports menu
+   - Generate daily summary
+   - Review balances
+   - Backup database
+
+---
+
+## 13. FINAL IMPLEMENTATION CHECKLIST
+
+### Database Setup
+- ☐ All tables created with correct data types
+- ☐ Relationships established with referential integrity
+- ☐ Sample data entered for testing
+
+### Forms Complete
+- ☐ Main menu functional
+- ☐ Fuel Records form with calculations working
+- ☐ LPO creation with auto-updates functional
+- ☐ Yard entry form operational
+- ☐ All navigation working
+
+### Reports Ready
+- ☐ LPO report matches current format
+- ☐ Fuel Records report exports to Excel
+- ☐ LPO Summary report generates correctly
+- ☐ PDF generation working
+
+### Automation Verified
+- ☐ Balance calculations automatic
+- ☐ LPO updates fuel records
+- ☐ LPO summary created automatically
+- ☐ Audit trail (CreatedBy/ModifiedBy) working
+
+### Security Implemented
+- ☐ Login form functional
+- ☐ User roles assigned
+- ☐ Form permissions enforced
+- ☐ Password protection active
+
+### Data Migration
+- ☐ Excel data exported to CSV
+- ☐ Import completed successfully
+- ☐ Data validated
+- ☐ Balances recalculated
+
+### Training & Documentation
+- ☐ User manual created
+- ☐ Staff trained
+- ☐ Quick reference guides printed
+- ☐ Support contact established
+
+### Deployment
+- ☐ Backup procedures established
+- ☐ Database location secured
+- ☐ Network access configured (if needed)
+- ☐ Launch date set
+- ☐ Go-live successful
+
+---
+
+## 14. SUPPORT & NEXT STEPS
+
+### Phase 2 Enhancements (Future)
+1. **DO Management Module** - Full integration
+2. **Mobile App** - For drivers
+3. **SMS Notifications** - Automated alerts
+4. **GPS Integration** - Track truck locations
+5. **Fuel Analytics** - Predictive modeling
+6. **Multi-currency Support** - For cross-border operations
+
+### Contact Information
+**System Administrator**: [Your Name]
+**Technical Support**: [Email/Phone]
+**Emergency Backup**: [Location]
+
+---
+
+**END OF DOCUMENTATION**
+
+═══════════════════════════════════════════════════════════════
+
+**Version**: 1.0
+**Date**: December 31, 2025
+**Author**: System Design Specialist
+**Company**: Tahmeed Transporters
+
+═══════════════════════════════════════════════════════════════
