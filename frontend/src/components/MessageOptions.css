@@ -1,0 +1,136 @@
+/* Message Options Dropdown */
+.message-options {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 10;
+}
+
+.message-options-trigger {
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.message:hover .message-options-trigger {
+  opacity: 1;
+}
+
+.message-options-trigger:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-arrow {
+  font-size: 0.6rem;
+  color: #666;
+  line-height: 1;
+}
+
+.message-options-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: #2a2f32;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  padding: 4px 0;
+  z-index: 1000;
+  animation: slideDown 0.2s ease-out;
+}
+
+.message.own-message .message-options-dropdown {
+  right: 0;
+  left: auto;
+}
+
+.message.other-message .message-options-dropdown {
+  left: 0;
+  right: auto;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.option-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-align: left;
+  color: #e9edef;
+}
+
+.option-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.option-item.danger {
+  color: #ff3b30;
+}
+
+.option-item.danger:hover {
+  background: rgba(255, 59, 48, 0.1);
+}
+
+.option-icon {
+  font-size: 1rem;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.option-text {
+  font-size: 0.9rem;
+  font-weight: 400;
+  flex: 1;
+}
+
+.option-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 4px 0;
+}
+
+/* Adjust for light theme if needed */
+@media (prefers-color-scheme: light) {
+  .message-options-dropdown {
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .option-item {
+    color: #1f1f1f;
+  }
+
+  .option-item:hover {
+    background: #f0f2f5;
+  }
+
+  .option-divider {
+    background: rgba(0, 0, 0, 0.1);
+  }
+}

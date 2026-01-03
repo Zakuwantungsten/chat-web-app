@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import MessageOptions from './MessageOptions';
 import './MessageList.css';
 
 const MessageList = ({ messages, currentUser, loading, onUserClick, onDeleteMessage }) => {
@@ -154,16 +155,12 @@ const MessageList = ({ messages, currentUser, loading, onUserClick, onDeleteMess
                 )}
                 
                 <div className="message-bubble">
-                  {onDeleteMessage && (message.senderId === currentUser.id) && (
-                    <button 
-                      className="delete-message-btn"
-                      onClick={() => onDeleteMessage(message.id)}
-                      title="Delete message"
-                      aria-label="Delete message"
-                    >
-                      🗑️
-                    </button>
-                  )}
+                  <MessageOptions
+                    message={message}
+                    currentUser={currentUser}
+                    onDelete={onDeleteMessage}
+                    onUserClick={onUserClick}
+                  />
                   {message.content && (
                     <div className="message-content">
                       {formatMessageContent(message.content)}
