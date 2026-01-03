@@ -199,13 +199,32 @@ const ChatInterface = () => {
 
     setSending(true);
     const messageContent = newMessage.trim();
-    setNewMessage(''); // Clear input immediately for better UX
+    const filesToUpload = [...selectedFiles];
+    
+    // Clear input and files immediately for better UX
+    setNewMessage('');
+    setSelectedFiles([]);
     
     try {
       // Upload files first if any
       let fileIds = [];
-      if (selectedFiles.length > 0) {
-        fileIds = await uploadFiles();
+      if (filesToUpload.length > 0) {
+        setUploading(true);
+        for (const file of filesToUpload) {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('roomId', roomId);
+
+          const response = await api.post('/api/files/upload', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          });
+
+          const fileData = response.data.data || response.data;
+          fileIds.push(fileData.id);
+        }
+        setUploading(false);
       }
 
       // Prepare message data
@@ -233,10 +252,12 @@ const ChatInterface = () => {
     } catch (err) {
       setError('Failed to send message');
       console.error('Error sending message:', err);
-      // Restore message content on error
+      // Restore message content and files on error
       setNewMessage(messageContent);
+      setSelectedFiles(filesToUpload);
     } finally {
       setSending(false);
+      setUploading(false);
     }
   };
 
@@ -315,38 +336,7 @@ const ChatInterface = () => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const uploadFiles = async () => {
-    if (selectedFiles.length === 0) return [];
 
-    setUploading(true);
-    const uploadedFileIds = [];
-
-    try {
-      for (const file of selectedFiles) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('roomId', roomId);
-
-        const response = await api.post('/api/files/upload', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-
-        const fileData = response.data.data || response.data;
-        uploadedFileIds.push(fileData.id);
-      }
-
-      setSelectedFiles([]);
-      return uploadedFileIds;
-    } catch (err) {
-      console.error('Error uploading files:', err);
-      setError('Failed to upload one or more files');
-      return [];
-    } finally {
-      setUploading(false);
-    }
-  };
 
   if (loading) {
     return <div className="chat-interface loading">Loading chat...</div>;
