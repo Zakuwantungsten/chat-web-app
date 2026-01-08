@@ -34,8 +34,6 @@ This project is a comprehensive, WhatsApp-inspired communication platform design
 - ✅ End-to-end encryption (AES-256)
 - ✅ Administrative dashboard with analytics
 
----
-
 ## 📊 Dataset and Seeded Data
 
 ### Database Structure
@@ -82,8 +80,6 @@ npm run db:seed     # Populates test data
 
 **Login Credentials:** See [LOGIN_CREDENTIALS.md](LOGIN_CREDENTIALS.md) for complete list of test accounts.
 
----
-
 ## 🚀 How to Compile and Run the Application
 
 ### Prerequisites
@@ -99,8 +95,6 @@ npm run db:seed     # Populates test data
 - SQLite3 requires prebuilt binaries only available for Node 20.x
 - Newer versions (21, 22, 23, 24+) lack SQLite3 support
 - Node 20.x is stable and production-ready
-
----
 
 ### Step-by-Step Installation Guide
 
