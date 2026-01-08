@@ -1,0 +1,105 @@
+/* Connection Status Styles */
+.connection-status {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  color: white;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+}
+
+.connection-status-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.status-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.status-icon {
+  font-size: 1rem;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.status-message {
+  font-weight: 600;
+}
+
+.error-detail {
+  font-size: 0.8rem;
+  opacity: 0.9;
+  font-style: italic;
+}
+
+.status-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.clear-error-btn,
+.reconnect-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.clear-error-btn:hover,
+.reconnect-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.clear-error-btn {
+  padding: 0.25rem;
+  font-weight: bold;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .connection-status {
+    font-size: 0.8rem;
+    padding: 0.5rem;
+  }
+  
+  .connection-status-content {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .status-info {
+    text-align: center;
+  }
+  
+  .error-detail {
+    display: block;
+    margin-top: 0.25rem;
+  }
+}

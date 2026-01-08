@@ -1,0 +1,75 @@
+/* Layout Styles - Mobile First Responsive Design */
+.layout {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.layout-body {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  background-color: var(--background);
+  padding: 0;
+  overflow: auto;
+  min-width: 0; /* Prevents flex item from overflowing */
+}
+
+/* Mobile overlay for sidebar */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  transition: opacity 0.3s ease;
+}
+
+/* Responsive Design */
+
+/* Mobile (up to 768px) */
+@media (max-width: 768px) {
+  .layout-body {
+    position: relative;
+  }
+
+  .main-content {
+    width: 100%;
+  }
+
+  .sidebar-overlay {
+    display: block;
+  }
+}
+
+/* Tablet (769px to 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .main-content {
+    padding: var(--space-2);
+  }
+}
+
+/* Desktop (1025px and up) */
+@media (min-width: 1025px) {
+  .main-content {
+    padding: var(--space-4);
+  }
+}
+
+/* Large screens (1440px and up) */
+@media (min-width: 1440px) {
+  .layout {
+    max-width: 1600px;
+    margin: 0 auto;
+    box-shadow: 0 0 50px var(--shadow);
+  }
+}

@@ -111,18 +111,25 @@ const ChatInterface = () => {
         markAsRead();
       };
 
+      // Listen for message deletion
+      const handleMessageDeleted = (data) => {
+        setMessages(prev => prev.filter(msg => msg.id !== data.messageId));
+      };
+
       // Listen for typing indicators
       const updateTypingUsers = () => {
         setTypingUsers(getTypingUsers(roomId));
       };
 
       socket.on('new_message', handleNewMessage);
+      socket.on('message_deleted', handleMessageDeleted);
       socket.on('user_typing_start', updateTypingUsers);
       socket.on('user_typing_stop', updateTypingUsers);
 
       // Cleanup
       return () => {
         socket.off('new_message', handleNewMessage);
+        socket.off('message_deleted', handleMessageDeleted);
         socket.off('user_typing_start', updateTypingUsers);
         socket.off('user_typing_stop', updateTypingUsers);
         leaveRoom(roomId);
@@ -320,6 +327,20 @@ const ChatInterface = () => {
     }
   };
 
+  const handleDeleteMessage = async (messageId) => {
+    if (!window.confirm('Are you sure you want to delete this message?')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/api/messages/${messageId}`);
+      // Message will be removed via socket event
+    } catch (err) {
+      console.error('Error deleting message:', err);
+      setError('Failed to delete message');
+    }
+  };
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -399,6 +420,7 @@ const ChatInterface = () => {
               currentUser={user}
               loading={loading}
               onUserClick={handleUserClick}
+              onDeleteMessage={handleDeleteMessage}
             />
             {typingUsers.length > 0 && (
               <div className="typing-indicator">
