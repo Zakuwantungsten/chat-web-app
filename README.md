@@ -28,7 +28,6 @@ This project is a comprehensive, WhatsApp-inspired communication platform design
 - ✅ Group and individual chat functionality
 - ✅ Role-based access control (Student, Class Rep, Admin)
 - ✅ WhatsApp-style responsive user interface
-- ✅ Progressive Web App (PWA) with offline support
 - ✅ Push notifications and real-time alerts
 - ✅ Advanced search and message filtering
 - ✅ End-to-end encryption (AES-256)
