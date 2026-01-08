@@ -7,6 +7,7 @@ This project is a comprehensive, WhatsApp-inspired communication platform design
 **Development Period:** 4 Days Intensive (January 5-8, 2026)  
 **Team Size:** 11 Members  
 **Course:** COMP 412 - Parallel And Distributed Computing
+**Project Diary:** https://docs.google.com/document/d/1WkZZGhIrg-4Oaa1PRwJQk0wKDbpJpJPtb2CcBPHtOas
 
 ---
 
