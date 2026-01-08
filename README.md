@@ -596,7 +596,7 @@ The frontend should be available at: `http://localhost:5173`
 ✅ **Group Work:** Assigned team collaboration  
 ✅ **Project Diary/Logbook:** Weekly progress documentation shared via Google Docs  
 ✅ **Code Deliverables:** Complete source code with detailed comments  
-✅ **Reports and Diagrams:** Comprehensive documentation and visual diagrams  
+✅ **Reports:** Comprehensive project documentation  
 ✅ **Performance Results:** Testing outcomes and system performance metrics  
 ✅ **Version Control:** Git/GitHub with instructor access for progress tracking  
 
