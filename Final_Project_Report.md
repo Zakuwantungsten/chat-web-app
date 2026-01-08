@@ -2,7 +2,7 @@
 ## Final Project Report
 
 **Team Size:** 11 Members  
-**Academic Institution:** [University Name]  
+**Academic Institution:** University Of Eldoret
 **Course:** COMP 412 - Parallel And Distributed Computing  
 **Development Period:** 4 Days Intensive (January 5-8, 2026)  
 **Project Status:** Successfully Completed ✅
