@@ -400,8 +400,14 @@ class MessageController {
         deletedBy: userId
       });
 
-      // TODO: Emit socket event for real-time update
-      // io.to(message.chatRoomId).emit('messageDeleted', { messageId, deletedBy: userId });
+      // Emit socket event for real-time update
+      if (req.io) {
+        req.io.to(`room_${message.chatRoomId}`).emit('message_deleted', { 
+          messageId, 
+          deletedBy: userId,
+          chatRoomId: message.chatRoomId
+        });
+      }
 
       res.json({
         success: true,
